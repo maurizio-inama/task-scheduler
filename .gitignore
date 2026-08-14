@@ -1,0 +1,37 @@
+# Java / Maven
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Local database files
+*.db
+
+# Node / React
+node_modules/
+dist/
+build/
+
+# Test / coverage
+coverage/
+
+# Personal
+_notes.md
