@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: task-scheduler
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/task_scheduler
+    username: scheduler
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
