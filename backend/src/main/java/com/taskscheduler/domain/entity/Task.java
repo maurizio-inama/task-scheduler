@@ -34,8 +34,32 @@ public class Task {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+    
+    // JPA
     protected Task() {
+    }
+
+    // Application code
+    public Task(
+        String title,
+        String description,
+        TaskStatus status,
+        TaskPriority priority,
+        Integer estimatedDurationMinutes,
+        LocalDateTime deadline
+    ) {
+        this.title = title;
+        this.description = description;
+        this.status = status;
+        this.priority = priority;
+        this.estimatedDurationMinutes = estimatedDurationMinutes;
+        this.deadline = deadline;
+        this.createdAt = LocalDateTime.now();
     }
 
     public Long getId() {
@@ -93,4 +117,5 @@ public class Task {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
 }
