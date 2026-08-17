@@ -1,0 +1,97 @@
+package com.taskscheduler.domain.entity;
+
+import jakarta.persistence.*;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "tasks")
+public class Task {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TaskStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TaskPriority priority;
+
+    @Column(nullable = false)
+    private Duration estimatedDuration;
+
+    @Column
+    private LocalDateTime deadline;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    protected Task() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public TaskStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TaskStatus status) {
+        this.status = status;
+    }
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
+    }
+
+    public Duration getEstimatedDuration() {
+        return estimatedDuration;
+    }
+
+    public void setEstimatedDuration(Duration estimatedDuration) {
+        this.estimatedDuration = estimatedDuration;
+    }
+
+    public LocalDateTime getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(LocalDateTime deadline) {
+        this.deadline = deadline;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+}
