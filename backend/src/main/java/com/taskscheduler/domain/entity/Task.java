@@ -2,7 +2,6 @@ package com.taskscheduler.domain.entity;
 
 import jakarta.persistence.*;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Entity
@@ -28,7 +27,7 @@ public class Task {
     private TaskPriority priority;
 
     @Column(nullable = false)
-    private Duration estimatedDuration;
+    private Integer estimatedDurationMinutes;
 
     @Column
     private LocalDateTime deadline;
@@ -75,12 +74,12 @@ public class Task {
         this.priority = priority;
     }
 
-    public Duration getEstimatedDuration() {
-        return estimatedDuration;
+    public Integer getEstimatedDurationMinutes() {
+        return estimatedDurationMinutes;
     }
 
-    public void setEstimatedDuration(Duration estimatedDuration) {
-        this.estimatedDuration = estimatedDuration;
+    public void setEstimatedDurationMinutes(Integer estimatedDurationMinutes) {
+        this.estimatedDurationMinutes = estimatedDurationMinutes;
     }
 
     public LocalDateTime getDeadline() {
