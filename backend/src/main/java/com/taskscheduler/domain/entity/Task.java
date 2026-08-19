@@ -44,6 +44,10 @@ public class Task {
     protected Task() {
     }
 
+    public Task(Long id) {
+        this.id = id;
+    }
+
     // Application code
     public Task(
         String title,

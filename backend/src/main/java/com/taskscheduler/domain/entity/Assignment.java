@@ -34,7 +34,7 @@ public class Assignment {
     @Column(nullable = false)
     private AssignmentStatus status;
 
-    protected Assignment() {
+    public Assignment() {
     }
 
     public Long getId() {

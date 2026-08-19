@@ -25,7 +25,16 @@ public class Schedule {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    protected Schedule() {
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+
+    public Schedule() {
+    }
+
+    public Schedule(Long id) {
+        this.id = id;
     }
 
     public Long getId() {
