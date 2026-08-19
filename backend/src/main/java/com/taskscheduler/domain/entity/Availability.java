@@ -25,6 +25,16 @@ public class Availability {
     protected Availability() {
     }
 
+    public Availability(
+        User user,
+        LocalDateTime startDateTime,
+        LocalDateTime endDateTime
+    ) {
+        this.user = user;
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
+    }
+
     public Long getId() {
         return id;
     }

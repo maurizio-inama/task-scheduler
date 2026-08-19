@@ -28,6 +28,18 @@ public class Unavailability {
     protected Unavailability() {
     }
 
+    public Unavailability(
+            User user,
+            LocalDateTime startDateTime,
+            LocalDateTime endDateTime,
+            String reason
+    ) {
+        this.user = user;
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
+        this.reason = reason;
+    }
+
     public Long getId() {
         return id;
     }
