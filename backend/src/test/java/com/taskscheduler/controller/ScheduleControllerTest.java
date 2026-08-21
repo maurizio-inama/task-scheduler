@@ -4,7 +4,14 @@ import com.taskscheduler.domain.entity.Schedule;
 import com.taskscheduler.domain.entity.ScheduleStatus;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
+import com.taskscheduler.service.AssignmentService;
 import com.taskscheduler.service.ScheduleService;
+import com.taskscheduler.service.SchedulingService;
+import com.taskscheduler.scheduling.model.Allocation;
+import com.taskscheduler.scheduling.model.SchedulingFailureReason;
+import com.taskscheduler.scheduling.model.SchedulingResult;
+import com.taskscheduler.scheduling.model.TaskSchedule;
+import com.taskscheduler.scheduling.model.UnscheduledTask;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -36,6 +43,12 @@ class ScheduleControllerTest {
 
     @MockitoBean
     private ScheduleService scheduleService;
+
+    @MockitoBean
+    private SchedulingService schedulingService;
+
+    @MockitoBean
+    private AssignmentService assignmentService;
 
     private Schedule schedule(Long id) {
         Schedule schedule = new Schedule(id);
@@ -172,5 +185,47 @@ class ScheduleControllerTest {
                 .andExpect(jsonPath("$.message").value(
                         "Invalid schedule status transition: DRAFT -> COMPLETED"
                 ));
+    }
+
+    @Test
+    void shouldGenerateAssignmentsForSchedule() throws Exception {
+        Schedule existing = schedule(7L);
+        when(scheduleService.getById(7L)).thenReturn(existing);
+
+        SchedulingResult result = new SchedulingResult(
+                List.of(new TaskSchedule(25L, 3L, List.of(
+                        new Allocation(
+                                LocalDateTime.of(2026, 8, 19, 8, 0),
+                                LocalDateTime.of(2026, 8, 19, 10, 0)
+                        )
+                ))),
+                List.of(new UnscheduledTask(
+                        26L,
+                        SchedulingFailureReason.NO_ELIGIBLE_USER,
+                        "No eligible user has capacity"
+                ))
+        );
+        when(schedulingService.generate(7L)).thenReturn(result);
+        when(assignmentService.getByScheduleId(7L)).thenReturn(List.of());
+
+        mockMvc.perform(post("/api/schedules/7/generate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scheduleId").value(7))
+                .andExpect(jsonPath("$.scheduledTaskCount").value(1))
+                .andExpect(jsonPath("$.createdAssignmentCount").value(0))
+                .andExpect(jsonPath("$.unscheduledTasks.length()").value(1))
+                .andExpect(jsonPath("$.unscheduledTasks[0].taskId").value(26))
+                .andExpect(jsonPath("$.unscheduledTasks[0].reason")
+                        .value("NO_ELIGIBLE_USER"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenGeneratingForMissingSchedule() throws Exception {
+        when(scheduleService.getById(99L))
+                .thenThrow(new EntityNotFoundException("Schedule not found: 99"));
+
+        mockMvc.perform(post("/api/schedules/99/generate"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("ENTITY_NOT_FOUND"));
     }
 }

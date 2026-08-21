@@ -1,12 +1,16 @@
 package com.taskscheduler.service;
 
 import com.taskscheduler.domain.entity.User;
+import com.taskscheduler.domain.repository.AssignmentRepository;
+import com.taskscheduler.domain.repository.AvailabilityRepository;
+import com.taskscheduler.domain.repository.UnavailabilityRepository;
 import com.taskscheduler.domain.repository.UserRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
 import com.taskscheduler.exception.ValidationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,13 +19,22 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AssignmentRepository assignmentRepository;
+    private final AvailabilityRepository availabilityRepository;
+    private final UnavailabilityRepository unavailabilityRepository;
 
     public UserServiceImpl(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AssignmentRepository assignmentRepository,
+            AvailabilityRepository availabilityRepository,
+            UnavailabilityRepository unavailabilityRepository
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.assignmentRepository = assignmentRepository;
+        this.availabilityRepository = availabilityRepository;
+        this.unavailabilityRepository = unavailabilityRepository;
     }
 
     @Override
@@ -90,8 +103,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         User user = getById(id);
+
+        if (assignmentRepository.existsByUserId(id)) {
+            throw new BusinessRuleException(
+                    "User has assignments and cannot be deleted: " + id
+                            + ". Remove their assignments first."
+            );
+        }
+
+        unavailabilityRepository.deleteAll(
+                unavailabilityRepository.findByUserId(id));
+        availabilityRepository.deleteAll(
+                availabilityRepository.findByUserId(id));
+
         userRepository.delete(user);
     }
 

@@ -11,6 +11,12 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 
     List<Assignment> findByStatusNot(AssignmentStatus status);
 
+    List<Assignment> findByScheduleId(Long scheduleId);
+
+    boolean existsByTaskId(Long taskId);
+
+    boolean existsByUserId(Long userId);
+
     boolean existsByTaskIdAndStatusNot(Long taskId, AssignmentStatus status);
 
     boolean existsByUserIdAndStartDateTimeLessThanAndEndDateTimeGreaterThan(

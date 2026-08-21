@@ -2,6 +2,9 @@ package com.taskscheduler.service;
 
 import com.taskscheduler.domain.entity.Role;
 import com.taskscheduler.domain.entity.User;
+import com.taskscheduler.domain.repository.AssignmentRepository;
+import com.taskscheduler.domain.repository.AvailabilityRepository;
+import com.taskscheduler.domain.repository.UnavailabilityRepository;
 import com.taskscheduler.domain.repository.UserRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
@@ -13,8 +16,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,11 +34,26 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AssignmentRepository assignmentRepository;
+
+    @Mock
+    private AvailabilityRepository availabilityRepository;
+
+    @Mock
+    private UnavailabilityRepository unavailabilityRepository;
+
     private UserService userService;
 
     @BeforeEach
     void setUp() {
-        userService = new UserServiceImpl(userRepository, passwordEncoder);
+        userService = new UserServiceImpl(
+                userRepository,
+                passwordEncoder,
+                assignmentRepository,
+                availabilityRepository,
+                unavailabilityRepository
+        );
     }
 
     @Test
@@ -193,5 +213,35 @@ class UserServiceTest {
             Role.OPERATOR,
             true
         );
+    }
+
+    @Test
+    void shouldRejectDeleteWhenUserHasAssignments() {
+        User user = createValidUser();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(assignmentRepository.existsByUserId(1L)).thenReturn(true);
+
+        BusinessRuleException exception = assertThrows(
+            BusinessRuleException.class,
+            () -> userService.delete(1L)
+        );
+
+        assertThat(exception.getMessage()).contains("cannot be deleted");
+        verify(userRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteShouldCascadePlanningDataButNotAssignments() {
+        User user = createValidUser();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(assignmentRepository.existsByUserId(1L)).thenReturn(false);
+        when(unavailabilityRepository.findByUserId(1L)).thenReturn(List.of());
+        when(availabilityRepository.findByUserId(1L)).thenReturn(List.of());
+
+        userService.delete(1L);
+
+        verify(availabilityRepository).deleteAll(List.of());
+        verify(unavailabilityRepository).deleteAll(List.of());
+        verify(userRepository).delete(user);
     }
 }

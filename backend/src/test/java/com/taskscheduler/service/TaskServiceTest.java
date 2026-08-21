@@ -3,6 +3,7 @@ package com.taskscheduler.service;
 import com.taskscheduler.domain.entity.Task;
 import com.taskscheduler.domain.entity.TaskPriority;
 import com.taskscheduler.domain.entity.TaskStatus;
+import com.taskscheduler.domain.repository.AssignmentRepository;
 import com.taskscheduler.domain.repository.TaskRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -26,6 +28,9 @@ class TaskServiceTest {
 
     @Mock
     private TaskRepository taskRepository;
+
+    @Mock
+    private AssignmentRepository assignmentRepository;
 
     @InjectMocks
     private TaskServiceImpl taskService;
@@ -299,6 +304,21 @@ class TaskServiceTest {
                 () -> taskService.delete(1L)
         );
 
+        verify(taskRepository, never()).delete(any());
+    }
+
+    @Test
+    void shouldRejectDeleteWhenTaskHasAssignments() {
+        when(taskRepository.findById(1L))
+                .thenReturn(Optional.of(task));
+        when(assignmentRepository.existsByTaskId(1L)).thenReturn(true);
+
+        BusinessRuleException exception = assertThrows(
+                BusinessRuleException.class,
+                () -> taskService.delete(1L)
+        );
+
+        assertThat(exception.getMessage()).contains("cannot be deleted");
         verify(taskRepository, never()).delete(any());
     }
 }

@@ -110,6 +110,25 @@ class SecurityAuthorizationTest {
     }
 
     @Test
+    void meEndpointReturnsAuthenticatedUserProfile() throws Exception {
+        when(authService.me("alice"))
+                .thenReturn(new com.taskscheduler.controller.dto.MeResponse(10L, "alice", Role.OPERATOR));
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + tokenFor("alice", Role.OPERATOR)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.role").value("OPERATOR"));
+    }
+
+    @Test
+    void meEndpointRejectsMissingToken() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void protectedEndpointRejectsMissingToken() throws Exception {
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isUnauthorized())

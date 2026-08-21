@@ -2,11 +2,13 @@ package com.taskscheduler.service;
 
 import com.taskscheduler.domain.entity.Schedule;
 import com.taskscheduler.domain.entity.ScheduleStatus;
+import com.taskscheduler.domain.repository.AssignmentRepository;
 import com.taskscheduler.domain.repository.ScheduleRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
 import com.taskscheduler.exception.ValidationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,9 +16,14 @@ import java.util.List;
 public class ScheduleServiceImpl implements ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
+    private final AssignmentRepository assignmentRepository;
 
-    public ScheduleServiceImpl(ScheduleRepository scheduleRepository) {
+    public ScheduleServiceImpl(
+            ScheduleRepository scheduleRepository,
+            AssignmentRepository assignmentRepository
+    ) {
         this.scheduleRepository = scheduleRepository;
+        this.assignmentRepository = assignmentRepository;
     }
 
     @Override
@@ -60,8 +67,11 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         Schedule schedule = getById(id);
+        assignmentRepository.deleteAll(
+                assignmentRepository.findByScheduleId(id));
         scheduleRepository.delete(schedule);
     }
 

@@ -2,6 +2,7 @@ package com.taskscheduler.service;
 
 import com.taskscheduler.domain.entity.Task;
 import com.taskscheduler.domain.entity.TaskStatus;
+import com.taskscheduler.domain.repository.AssignmentRepository;
 import com.taskscheduler.domain.repository.TaskRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
@@ -14,9 +15,14 @@ import java.util.List;
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
+    private final AssignmentRepository assignmentRepository;
 
-    public TaskServiceImpl(TaskRepository taskRepository) {
+    public TaskServiceImpl(
+            TaskRepository taskRepository,
+            AssignmentRepository assignmentRepository
+    ) {
         this.taskRepository = taskRepository;
+        this.assignmentRepository = assignmentRepository;
     }
 
     @Override
@@ -64,6 +70,14 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public void delete(Long id) {
         Task task = getById(id);
+
+        if (assignmentRepository.existsByTaskId(id)) {
+            throw new BusinessRuleException(
+                    "Task has assignments and cannot be deleted: " + id
+                            + ". Remove its assignments first."
+            );
+        }
+
         taskRepository.delete(task);
     }
 

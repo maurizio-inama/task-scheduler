@@ -2,6 +2,7 @@ package com.taskscheduler.service;
 
 import com.taskscheduler.domain.entity.Schedule;
 import com.taskscheduler.domain.entity.ScheduleStatus;
+import com.taskscheduler.domain.repository.AssignmentRepository;
 import com.taskscheduler.domain.repository.ScheduleRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
@@ -25,6 +26,9 @@ class ScheduleServiceTest {
 
     @Mock
     private ScheduleRepository scheduleRepository;
+
+    @Mock
+    private AssignmentRepository assignmentRepository;
 
     @InjectMocks
     private ScheduleServiceImpl scheduleService;
@@ -243,9 +247,12 @@ class ScheduleServiceTest {
 
         when(scheduleRepository.findById(1L))
                 .thenReturn(Optional.of(schedule));
+        when(assignmentRepository.findByScheduleId(1L))
+                .thenReturn(List.of());
 
         scheduleService.delete(1L);
 
+        verify(assignmentRepository).deleteAll(List.of());
         verify(scheduleRepository).delete(schedule);
     }
 

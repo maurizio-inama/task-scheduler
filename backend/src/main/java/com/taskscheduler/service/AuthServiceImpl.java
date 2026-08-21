@@ -2,8 +2,10 @@ package com.taskscheduler.service;
 
 import com.taskscheduler.controller.dto.AuthResponse;
 import com.taskscheduler.controller.dto.LoginRequest;
+import com.taskscheduler.controller.dto.MeResponse;
 import com.taskscheduler.domain.entity.User;
 import com.taskscheduler.domain.repository.UserRepository;
+import com.taskscheduler.exception.EntityNotFoundException;
 import com.taskscheduler.security.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

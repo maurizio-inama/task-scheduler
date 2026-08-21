@@ -75,6 +75,11 @@ public class AssignmentServiceImpl implements AssignmentService {
     }
 
     @Override
+    public List<Assignment> getByScheduleId(Long scheduleId) {
+        return assignmentRepository.findByScheduleId(scheduleId);
+    }
+
+    @Override
     public Assignment update(Long id, Assignment assignment) {
         Assignment existing = getById(id);
 

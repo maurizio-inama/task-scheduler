@@ -12,6 +12,8 @@ public interface AssignmentService {
 
     List<Assignment> getAll();
 
+    List<Assignment> getByScheduleId(Long scheduleId);
+
     Assignment update(Long id, Assignment assignment);
 
     void delete(Long id);
