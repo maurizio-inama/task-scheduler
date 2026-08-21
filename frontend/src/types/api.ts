@@ -140,3 +140,17 @@ export interface AssignmentInput {
   endDateTime: string;
   status: AssignmentStatus;
 }
+
+export interface UnscheduledTaskInfo {
+  taskId: number;
+  reason: string;
+  detail: string | null;
+}
+
+export interface GenerateResponse {
+  scheduleId: number;
+  scheduledTaskCount: number;
+  createdAssignmentCount: number;
+  assignments: Assignment[];
+  unscheduledTasks: UnscheduledTaskInfo[];
+}

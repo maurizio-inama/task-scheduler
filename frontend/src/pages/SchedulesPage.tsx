@@ -12,7 +12,12 @@ import {
   validateRequiredFields,
   type Errors,
 } from '../utils/validation';
-import type { Schedule, ScheduleInput, ScheduleStatus } from '../types/api';
+import type {
+  GenerateResponse,
+  Schedule,
+  ScheduleInput,
+  ScheduleStatus,
+} from '../types/api';
 
 const STATUSES: ScheduleStatus[] = ['DRAFT', 'PUBLISHED', 'COMPLETED', 'CANCELLED'];
 
@@ -42,6 +47,9 @@ export function SchedulesPage() {
   const [fieldErrors, setFieldErrors] = useState<Errors<FormValues>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const [generateResult, setGenerateResult] =
+    useState<GenerateResponse | null>(null);
 
   const openCreate = () => {
     setValues(EMPTY_FORM);
@@ -111,9 +119,25 @@ export function SchedulesPage() {
     }
     try {
       await schedulesApi.remove(schedule.id);
+      setGenerateResult(null);
       refetch();
     } catch (cause) {
       setActionError(describe(cause));
+    }
+  };
+
+  const handleGenerate = async (schedule: Schedule) => {
+    setActionError(null);
+    setGeneratingId(schedule.id);
+    try {
+      const result = await schedulesApi.generate(schedule.id);
+      setGenerateResult(result);
+      refetch();
+    } catch (cause) {
+      setGenerateResult(null);
+      setActionError(describe(cause));
+    } finally {
+      setGeneratingId(null);
     }
   };
 
@@ -129,9 +153,9 @@ export function SchedulesPage() {
       </div>
 
       <p className="page-description">
-        A schedule groups task assignments within a planning window. Schedules
-        are created in DRAFT status here; lifecycle transitions (publishing,
-        generation runs) currently happen through the backend service.
+        A schedule groups task assignments within a planning window. Use
+        Generate to run the scheduling engine: pending tasks are allocated to
+        available users inside the window.
       </p>
 
       {error && (
@@ -142,6 +166,30 @@ export function SchedulesPage() {
       {actionError && (
         <div className="alert alert-error" role="alert">
           {actionError}
+        </div>
+      )}
+      {generateResult && (
+        <div
+          className={
+            generateResult.unscheduledTasks.length === 0
+              ? 'alert alert-success'
+              : 'alert alert-warning'
+          }
+          role="status"
+        >
+          <strong>Schedule #{generateResult.scheduleId} generated.</strong>{' '}
+          {generateResult.scheduledTaskCount} task(s) scheduled with{' '}
+          {generateResult.createdAssignmentCount} assignment(s).
+          {generateResult.unscheduledTasks.length > 0 && (
+            <ul className="alert-list">
+              {generateResult.unscheduledTasks.map((entry) => (
+                <li key={entry.taskId}>
+                  Task #{entry.taskId}: {entry.reason}
+                  {entry.detail ? ` — ${entry.detail}` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -172,8 +220,19 @@ export function SchedulesPage() {
                   <td className="table-actions">
                     <button
                       type="button"
+                      className="btn btn-secondary"
+                      onClick={() => handleGenerate(schedule)}
+                      disabled={generatingId !== null}
+                    >
+                      {generatingId === schedule.id
+                        ? 'Generating…'
+                        : 'Generate'}
+                    </button>
+                    <button
+                      type="button"
                       className="btn btn-danger"
                       onClick={() => handleDelete(schedule)}
+                      disabled={generatingId !== null}
                     >
                       Delete
                     </button>

@@ -414,6 +414,23 @@ textarea:focus {
   color: var(--color-danger);
 }
 
+.alert-success {
+  background: #e5f2ea;
+  border: 1px solid #bfe3cd;
+  color: #1e7a46;
+}
+
+.alert-warning {
+  background: #fdf1df;
+  border: 1px solid #f3ddb5;
+  color: #a05e03;
+}
+
+.alert-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+}
+
 /* Loading & empty */
 .loading {
   display: flex;

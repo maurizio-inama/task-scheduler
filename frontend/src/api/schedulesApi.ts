@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { Schedule, ScheduleInput } from '../types/api';
+import type { GenerateResponse, Schedule, ScheduleInput } from '../types/api';
 
 export const schedulesApi = {
   list(): Promise<Schedule[]> {
@@ -20,5 +20,11 @@ export const schedulesApi = {
 
   remove(id: number): Promise<void> {
     return request<void>(`/schedules/${id}`, { method: 'DELETE' });
+  },
+
+  generate(id: number): Promise<GenerateResponse> {
+    return request<GenerateResponse>(`/schedules/${id}/generate`, {
+      method: 'POST',
+    });
   },
 };
