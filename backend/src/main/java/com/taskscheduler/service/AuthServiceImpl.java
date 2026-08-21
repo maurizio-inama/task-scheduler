@@ -53,4 +53,20 @@ public class AuthServiceImpl implements AuthService {
                 user.getRole()
         );
     }
+
+    @Override
+    public MeResponse me(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "User not found: " + username
+                        )
+                );
+
+        return new MeResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getRole()
+        );
+    }
 }

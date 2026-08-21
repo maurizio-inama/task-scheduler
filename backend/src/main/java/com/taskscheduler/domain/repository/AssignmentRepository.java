@@ -1,11 +1,17 @@
 package com.taskscheduler.domain.repository;
 
 import com.taskscheduler.domain.entity.Assignment;
+import com.taskscheduler.domain.entity.AssignmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
+
+    List<Assignment> findByStatusNot(AssignmentStatus status);
+
+    boolean existsByTaskIdAndStatusNot(Long taskId, AssignmentStatus status);
 
     boolean existsByUserIdAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
             Long userId,
