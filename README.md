@@ -1,8 +1,9 @@
 # Task Scheduler
 
-A full-stack application for planning work: pending tasks are automatically
-allocated to available users inside a schedule's time window by a scheduling
-engine that respects availability, unavailability, deadlines and capacity.
+**Task Scheduler** is a full-stack demonstration project for planning and automatically scheduling work. It combines a Java/Spring Boot backend, React frontend, PostgreSQL persistence, REST APIs, authentication and a constraint-aware scheduling engine. The project was developed in Visual Studio Code with the assistance of AI tools, including ChatGPT and OpenCode.
+
+Pending tasks are automatically allocated to available users within a schedule's time window while respecting availability, unavailability, deadlines, priorities, and user capacity.
+
 
 ## Stack
 
@@ -66,14 +67,19 @@ the backend.
 ### 5. Log in
 
 There is no registration endpoint; users are created by an ADMIN through
-`POST /api/users`. To bootstrap the first admin, insert one directly (any
-BCrypt hash works for local development):
+`POST /api/users`. To bootstrap the first admin, insert one directly with a
+BCrypt hash of the password. For local development, this command creates
+`admin` / `admin` (the `\$` keeps the hash intact in bash):
 
 ```bash
 docker exec -it task-scheduler-postgres psql -U scheduler -d task_scheduler -c \
   "INSERT INTO users (username, password, first_name, last_name, email, role, enabled, created_at, updated_at)
-   VALUES ('admin', '<bcrypt-hash>', 'Admin', 'User', 'admin@example.com', 'ADMIN', true, now(), now());"
+   VALUES ('admin', '\$2a\$10\$350CaHfhAxZB3bRqHdCohOeJUPhBEzgp8bJvZRAEoNOcEwyeuMvsa', 'Admin', 'User', 'admin@example.com', 'ADMIN', true, now(), now())
+   ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, enabled = true;"
 ```
+
+> The hash above encodes the password `admin` and is meant for local
+> development only — never reuse these credentials anywhere real.
 
 ## Roles
 

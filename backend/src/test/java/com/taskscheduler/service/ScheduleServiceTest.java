@@ -1,9 +1,15 @@
 package com.taskscheduler.service;
 
+import com.taskscheduler.domain.entity.Assignment;
+import com.taskscheduler.domain.entity.AssignmentStatus;
 import com.taskscheduler.domain.entity.Schedule;
 import com.taskscheduler.domain.entity.ScheduleStatus;
+import com.taskscheduler.domain.entity.Task;
+import com.taskscheduler.domain.entity.TaskPriority;
+import com.taskscheduler.domain.entity.TaskStatus;
 import com.taskscheduler.domain.repository.AssignmentRepository;
 import com.taskscheduler.domain.repository.ScheduleRepository;
+import com.taskscheduler.domain.repository.TaskRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
 import com.taskscheduler.exception.ValidationException;
@@ -29,6 +35,9 @@ class ScheduleServiceTest {
 
     @Mock
     private AssignmentRepository assignmentRepository;
+
+    @Mock
+    private TaskRepository taskRepository;
 
     @InjectMocks
     private ScheduleServiceImpl scheduleService;
@@ -238,7 +247,7 @@ class ScheduleServiceTest {
     }
 
     @Test
-    void deleteShouldDeleteExistingSchedule() {
+    void deleteWithoutAssignmentsShouldOnlyRemoveSchedule() {
         Schedule schedule = createSchedule(
                 start,
                 end,
@@ -252,8 +261,140 @@ class ScheduleServiceTest {
 
         scheduleService.delete(1L);
 
+        verify(taskRepository, never()).save(any());
         verify(assignmentRepository).deleteAll(List.of());
         verify(scheduleRepository).delete(schedule);
+    }
+
+    @Test
+    void deleteShouldReleaseAssignedTasksBackToPending() {
+        Schedule schedule = createSchedule(
+                start,
+                end,
+                ScheduleStatus.DRAFT
+        );
+        Task scheduled = scheduledTask("Assigned task");
+        Task alsoScheduled = scheduledTask("Second assigned task");
+        Assignment first = assignmentFor(schedule, scheduled);
+        Assignment second = assignmentFor(schedule, alsoScheduled);
+
+        when(scheduleRepository.findById(1L))
+                .thenReturn(Optional.of(schedule));
+        when(assignmentRepository.findByScheduleId(1L))
+                .thenReturn(List.of(first, second));
+
+        scheduleService.delete(1L);
+
+        assertEquals(TaskStatus.PENDING, scheduled.getStatus());
+        assertEquals(TaskStatus.PENDING, alsoScheduled.getStatus());
+        verify(taskRepository).save(scheduled);
+        verify(taskRepository).save(alsoScheduled);
+        verify(assignmentRepository)
+                .deleteAll(List.of(first, second));
+        verify(scheduleRepository).delete(schedule);
+    }
+
+    @Test
+    void deleteShouldNotModifyTasksOrAssignmentsOfOtherSchedules() {
+        Schedule schedule = createSchedule(
+                start,
+                end,
+                ScheduleStatus.DRAFT
+        );
+        Task ownTask = scheduledTask("Own task");
+        Task foreignTask = scheduledTask("Other schedule's task");
+        Assignment ownAssignment = assignmentFor(schedule, ownTask);
+
+        when(scheduleRepository.findById(1L))
+                .thenReturn(Optional.of(schedule));
+        // the repository only returns assignments of THIS schedule
+        when(assignmentRepository.findByScheduleId(1L))
+                .thenReturn(List.of(ownAssignment));
+
+        scheduleService.delete(1L);
+
+        assertEquals(TaskStatus.SCHEDULED, foreignTask.getStatus());
+        verify(taskRepository).save(ownTask);
+        verify(taskRepository, never()).save(foreignTask);
+        verify(assignmentRepository).deleteAll(List.of(ownAssignment));
+    }
+
+    @Test
+    void deleteShouldKeepManuallyAdvancedTaskStatuses() {
+        Schedule schedule = createSchedule(
+                start,
+                end,
+                ScheduleStatus.DRAFT
+        );
+        Task inProgress = new Task(
+                "Started task",
+                null,
+                TaskStatus.IN_PROGRESS,
+                TaskPriority.HIGH,
+                60,
+                LocalDateTime.of(2026, 8, 30, 17, 0)
+        );
+        Assignment assignment = assignmentFor(schedule, inProgress);
+
+        when(scheduleRepository.findById(1L))
+                .thenReturn(Optional.of(schedule));
+        when(assignmentRepository.findByScheduleId(1L))
+                .thenReturn(List.of(assignment));
+
+        scheduleService.delete(1L);
+
+        assertEquals(TaskStatus.IN_PROGRESS, inProgress.getStatus());
+        verify(taskRepository, never()).save(any());
+        verify(assignmentRepository).deleteAll(List.of(assignment));
+        verify(scheduleRepository).delete(schedule);
+    }
+
+    @Test
+    void deleteFailureShouldLeaveNoPartialChanges() {
+        Schedule schedule = createSchedule(
+                start,
+                end,
+                ScheduleStatus.DRAFT
+        );
+        Task scheduled = scheduledTask("Assigned task");
+        Assignment assignment = assignmentFor(schedule, scheduled);
+
+        when(scheduleRepository.findById(1L))
+                .thenReturn(Optional.of(schedule));
+        when(assignmentRepository.findByScheduleId(1L))
+                .thenReturn(List.of(assignment));
+        when(taskRepository.save(any(Task.class)))
+                .thenThrow(new IllegalStateException("simulated failure"));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> scheduleService.delete(1L)
+        );
+
+        verify(assignmentRepository, never()).deleteAll(any());
+        verify(scheduleRepository, never()).delete(any());
+    }
+
+    private Task scheduledTask(String title) {
+        return new Task(
+                title,
+                null,
+                TaskStatus.SCHEDULED,
+                TaskPriority.MEDIUM,
+                60,
+                LocalDateTime.of(2026, 8, 30, 17, 0)
+        );
+    }
+
+    private Assignment assignmentFor(Schedule schedule, Task task) {
+        Assignment assignment = new Assignment();
+        assignment.setUser(new com.taskscheduler.domain.entity.User(1L));
+        assignment.setTask(task);
+        assignment.setSchedule(schedule);
+        assignment.setStartDateTime(start);
+        assignment.setEndDateTime(start.plusHours(1));
+        assignment.setStatus(AssignmentStatus.ASSIGNED);
+        return assignment;
     }
 
     @Test

@@ -409,9 +409,94 @@ class SystemIntegrationTest {
                 .andExpect(status().isNoContent());
         createdScheduleIds.remove(schedule.getId());
 
+        transactionTemplate.executeWithoutResult(status -> {
+            assertThat(assignmentRepository.findByScheduleId(schedule.getId()))
+                    .isEmpty();
+            assertThat(taskRepository.findById(first.getId()).orElseThrow()
+                    .getStatus()).isEqualTo(TaskStatus.PENDING);
+            assertThat(taskRepository.findById(second.getId()).orElseThrow()
+                    .getStatus()).isEqualTo(TaskStatus.PENDING);
+        });
+    }
+
+    @Test
+    void deletingScheduleReleasesTasksAndAllowsRescheduling() throws Exception {
+        User admin = newUser(adminUsername, Role.ADMIN, true);
+        User operator = newUser(operatorUsername, Role.OPERATOR, true);
+        String adminToken = login(adminUsername);
+
+        LocalDateTime windowStart = LocalDateTime.of(2026, 9, 21, 8, 0);
+        LocalDateTime windowEnd = LocalDateTime.of(2026, 9, 21, 18, 0);
+
+        Schedule firstDraft = new Schedule();
+        firstDraft.setStartDateTime(windowStart);
+        firstDraft.setEndDateTime(windowEnd);
+        firstDraft.setStatus(ScheduleStatus.DRAFT);
+        final Schedule firstSchedule = scheduleRepository.save(firstDraft);
+        createdScheduleIds.add(firstSchedule.getId());
+
+        Task task = persistTask("release-me-" + suffix, 120,
+                TaskPriority.HIGH);
+        Availability availability = availabilityRepository.save(
+                new Availability(operator, windowStart, windowEnd));
+        createdAvailabilityIds.add(availability.getId());
+
+        mockMvc.perform(
+                        post("/api/schedules/" + firstSchedule.getId() + "/generate")
+                                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scheduledTaskCount").value(1));
+
         transactionTemplate.executeWithoutResult(status ->
-                assertThat(assignmentRepository.findByScheduleId(schedule.getId()))
-                        .isEmpty());
+                assertThat(taskRepository.findById(task.getId()).orElseThrow()
+                        .getStatus()).isEqualTo(TaskStatus.SCHEDULED));
+
+        mockMvc.perform(get("/api/tasks/" + task.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SCHEDULED"));
+
+        mockMvc.perform(delete("/api/schedules/" + firstSchedule.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+        createdScheduleIds.remove(firstSchedule.getId());
+
+        transactionTemplate.executeWithoutResult(status -> {
+            assertThat(assignmentRepository.findByScheduleId(
+                    firstSchedule.getId())).isEmpty();
+            assertThat(taskRepository.findById(task.getId()).orElseThrow()
+                    .getStatus()).isEqualTo(TaskStatus.PENDING);
+        });
+
+        Schedule secondDraft = new Schedule();
+        secondDraft.setStartDateTime(windowStart.plusDays(1));
+        secondDraft.setEndDateTime(windowEnd.plusDays(1));
+        secondDraft.setStatus(ScheduleStatus.DRAFT);
+        final Schedule secondSchedule = scheduleRepository.save(secondDraft);
+        createdScheduleIds.add(secondSchedule.getId());
+        Availability secondAvailability = availabilityRepository.save(
+                new Availability(operator,
+                        windowStart.plusDays(1), windowEnd.plusDays(1)));
+        createdAvailabilityIds.add(secondAvailability.getId());
+
+        String secondRun = mockMvc.perform(
+                        post("/api/schedules/" + secondSchedule.getId() + "/generate")
+                                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(secondRun).contains("\"scheduledTaskCount\":1");
+        transactionTemplate.executeWithoutResult(status -> {
+            Task released = taskRepository.findById(task.getId()).orElseThrow();
+            assertThat(released.getStatus()).isEqualTo(TaskStatus.SCHEDULED);
+            List<Assignment> assignments = assignmentRepository
+                    .findByScheduleId(secondSchedule.getId());
+            assertThat(assignments).hasSize(1);
+            assertThat(assignments.get(0).getTask().getId())
+                    .isEqualTo(task.getId());
+        });
     }
 
     @Test

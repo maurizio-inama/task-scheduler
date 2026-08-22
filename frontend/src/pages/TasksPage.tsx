@@ -7,11 +7,12 @@ import { FormField } from '../components/FormField';
 import { Loading } from '../components/Loading';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
+import { formatDateTime, formatDuration } from '../utils/format';
 import {
-  formatDateTime,
-  formatDuration,
-  toDateTimeInputValue,
-} from '../utils/format';
+  END_OF_DAY,
+  joinDateOptionalTime,
+  splitDateTime,
+} from '../utils/datetime';
 import {
   validatePositiveNumber,
   validateRequiredFields,
@@ -34,13 +35,19 @@ const STATUSES: TaskStatus[] = [
 
 const PRIORITIES: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
+type DurationUnit = 'minutes' | 'hours';
+
+const MINUTES_PER_HOUR = 60;
+
 interface FormValues {
   title: string;
   description: string;
   status: TaskStatus;
   priority: TaskPriority;
-  estimatedDurationMinutes: string;
-  deadline: string;
+  duration: string;
+  durationUnit: DurationUnit;
+  deadlineDate: string;
+  deadlineTime: string;
 }
 
 const EMPTY_FORM: FormValues = {
@@ -48,9 +55,18 @@ const EMPTY_FORM: FormValues = {
   description: '',
   status: 'PENDING',
   priority: 'MEDIUM',
-  estimatedDurationMinutes: '',
-  deadline: '',
+  duration: '',
+  durationUnit: 'minutes',
+  deadlineDate: '',
+  deadlineTime: '',
 };
+
+function durationInMinutes(values: FormValues): number {
+  const amount = Number(values.duration);
+  return values.durationUnit === 'hours'
+    ? Math.round(amount * MINUTES_PER_HOUR)
+    : Math.round(amount);
+}
 
 export function TasksPage() {
   const { user } = useAuth();
@@ -77,14 +93,18 @@ export function TasksPage() {
   };
 
   const openEdit = (task: Task) => {
+    const minutes = task.estimatedDurationMinutes;
+    const wholeHours = minutes > 0 && minutes % MINUTES_PER_HOUR === 0;
     setEditing(task);
     setValues({
       title: task.title,
       description: task.description ?? '',
       status: task.status,
       priority: task.priority,
-      estimatedDurationMinutes: String(task.estimatedDurationMinutes),
-      deadline: toDateTimeInputValue(task.deadline),
+      duration: String(wholeHours ? minutes / MINUTES_PER_HOUR : minutes),
+      durationUnit: wholeHours ? 'hours' : 'minutes',
+      deadlineDate: splitDateTime(task.deadline).date,
+      deadlineTime: splitDateTime(task.deadline).time,
     });
     setFieldErrors({});
     setActionError(null);
@@ -98,20 +118,31 @@ export function TasksPage() {
 
   const validate = (): boolean => {
     const nextErrors = validateRequiredFields(
-      { title: values.title, estimatedDurationMinutes: values.estimatedDurationMinutes },
-      ['title', 'estimatedDurationMinutes'],
+      { title: values.title, duration: values.duration },
+      ['title', 'duration'],
     ) as Errors<FormValues>;
 
-    if (!nextErrors.estimatedDurationMinutes) {
-      const durationError = validatePositiveNumber(
-        values.estimatedDurationMinutes === ''
-          ? ''
-          : Number(values.estimatedDurationMinutes),
-        'Estimated duration',
-      );
-      if (durationError) {
-        nextErrors.estimatedDurationMinutes = durationError;
+    if (!nextErrors.duration) {
+      const amount = Number(values.duration);
+      if (!Number.isFinite(amount)) {
+        nextErrors.duration = 'Enter a valid number.';
+      } else {
+        const durationError = validatePositiveNumber(
+          amount,
+          'Estimated duration',
+        );
+        if (durationError) {
+          nextErrors.duration = durationError;
+        } else if (durationInMinutes(values) < 1) {
+          nextErrors.duration =
+            'Estimated duration is too small: it rounds down to less than a minute.';
+        }
       }
+    }
+
+    if (values.deadlineTime.length > 0 && values.deadlineDate.length === 0) {
+      nextErrors.deadlineDate =
+        'Pick a date for the deadline, or remove the time.';
     }
 
     setFieldErrors(nextErrors);
@@ -125,14 +156,20 @@ export function TasksPage() {
       return;
     }
 
+    const deadline = joinDateOptionalTime(
+      values.deadlineDate,
+      values.deadlineTime,
+      END_OF_DAY,
+    );
+
     const input: TaskInput = {
       title: values.title.trim(),
       description:
         values.description.trim().length > 0 ? values.description.trim() : null,
       status: values.status,
       priority: values.priority,
-      estimatedDurationMinutes: Number(values.estimatedDurationMinutes),
-      deadline: values.deadline.length > 0 ? values.deadline : null,
+      estimatedDurationMinutes: durationInMinutes(values),
+      deadline,
     };
 
     setSaving(true);
@@ -319,37 +356,72 @@ export function TasksPage() {
 
             <div className="form-row">
               <FormField
-                label="Estimated duration (minutes)"
+                label="Estimated duration"
                 htmlFor="task-duration"
                 required
-                error={fieldErrors.estimatedDurationMinutes}
+                error={fieldErrors.duration}
               >
-                <input
-                  id="task-duration"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={values.estimatedDurationMinutes}
-                  onChange={(e) =>
-                    setValues({
-                      ...values,
-                      estimatedDurationMinutes: e.target.value,
-                    })
-                  }
-                  disabled={saving}
-                />
+                <div className="input-with-action">
+                  <input
+                    id="task-duration"
+                    type="number"
+                    min={values.durationUnit === 'hours' ? 0.25 : 1}
+                    step={values.durationUnit === 'hours' ? 0.25 : 1}
+                    value={values.duration}
+                    onChange={(e) =>
+                      setValues({ ...values, duration: e.target.value })
+                    }
+                    disabled={saving}
+                  />
+                  <select
+                    aria-label="Duration unit"
+                    value={values.durationUnit}
+                    onChange={(e) =>
+                      setValues({
+                        ...values,
+                        durationUnit: e.target.value as DurationUnit,
+                      })
+                    }
+                    disabled={saving}
+                  >
+                    <option value="minutes">minutes</option>
+                    <option value="hours">hours</option>
+                  </select>
+                </div>
               </FormField>
 
-              <FormField label="Deadline" htmlFor="task-deadline" hint="Optional">
-                <input
-                  id="task-deadline"
-                  type="datetime-local"
-                  value={values.deadline}
-                  onChange={(e) =>
-                    setValues({ ...values, deadline: e.target.value })
-                  }
-                  disabled={saving}
-                />
+              <FormField
+                label="Deadline"
+                htmlFor="task-deadline-date"
+                hint={
+                  values.deadlineDate
+                    ? `Will be saved as ${formatDateTime(
+                        `${values.deadlineDate}T${values.deadlineTime || '23:59'}`,
+                      )}`
+                    : 'Optional — leave the time empty for end of day (23:59)'
+                }
+                error={fieldErrors.deadlineDate}
+              >
+                <div className="input-with-action">
+                  <input
+                    id="task-deadline-date"
+                    type="date"
+                    value={values.deadlineDate}
+                    onChange={(e) =>
+                      setValues({ ...values, deadlineDate: e.target.value })
+                    }
+                    disabled={saving}
+                  />
+                  <input
+                    aria-label="Deadline time"
+                    type="time"
+                    value={values.deadlineTime}
+                    onChange={(e) =>
+                      setValues({ ...values, deadlineTime: e.target.value })
+                    }
+                    disabled={saving}
+                  />
+                </div>
               </FormField>
             </div>
 

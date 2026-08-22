@@ -5,12 +5,19 @@ import { schedulesApi } from '../api/schedulesApi';
 import { tasksApi } from '../api/tasksApi';
 import { usersApi } from '../api/usersApi';
 import { Badge } from '../components/Badge';
+import { DateOptionalTimeInput } from '../components/DateOptionalTimeInput';
 import { EmptyState } from '../components/EmptyState';
 import { FormField } from '../components/FormField';
 import { Loading } from '../components/Loading';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
-import { formatDateTime, toDateTimeInputValue } from '../utils/format';
+import { formatDateTime } from '../utils/format';
+import {
+  END_OF_DAY,
+  START_OF_DAY,
+  joinDateOptionalTime,
+  splitDateTime,
+} from '../utils/datetime';
 import {
   validateDateRange,
   validateRequiredFields,
@@ -33,8 +40,10 @@ interface FormValues {
   userId: string;
   taskId: string;
   scheduleId: string;
-  startDateTime: string;
-  endDateTime: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
   status: AssignmentStatus;
 }
 
@@ -42,8 +51,10 @@ const EMPTY_FORM: FormValues = {
   userId: '',
   taskId: '',
   scheduleId: '',
-  startDateTime: '',
-  endDateTime: '',
+  startDate: '',
+  startTime: '',
+  endDate: '',
+  endTime: '',
   status: 'ASSIGNED',
 };
 
@@ -84,8 +95,10 @@ export function AssignmentsPage() {
       userId: String(assignment.userId),
       taskId: String(assignment.taskId),
       scheduleId: String(assignment.scheduleId),
-      startDateTime: toDateTimeInputValue(assignment.startDateTime),
-      endDateTime: toDateTimeInputValue(assignment.endDateTime),
+      startDate: splitDateTime(assignment.startDateTime).date,
+      startTime: splitDateTime(assignment.startDateTime).time,
+      endDate: splitDateTime(assignment.endDateTime).date,
+      endTime: splitDateTime(assignment.endDateTime).time,
       status: assignment.status,
     });
     setFieldErrors({});
@@ -104,18 +117,27 @@ export function AssignmentsPage() {
         userId: values.userId,
         taskId: values.taskId,
         scheduleId: values.scheduleId,
-        startDateTime: values.startDateTime,
-        endDateTime: values.endDateTime,
+        startDate: values.startDate,
+        endDate: values.endDate,
       },
-      ['userId', 'taskId', 'scheduleId', 'startDateTime', 'endDateTime'],
+      ['userId', 'taskId', 'scheduleId', 'startDate', 'endDate'],
     ) as Errors<FormValues>;
 
-    const rangeError = validateDateRange(
-      values.startDateTime,
-      values.endDateTime,
+    const start = joinDateOptionalTime(
+      values.startDate,
+      values.startTime,
+      START_OF_DAY,
     );
-    if (rangeError) {
-      nextErrors.endDateTime = rangeError;
+    const end = joinDateOptionalTime(
+      values.endDate,
+      values.endTime,
+      END_OF_DAY,
+    );
+    if (start && end) {
+      const rangeError = validateDateRange(start, end);
+      if (rangeError) {
+        nextErrors.endDate = rangeError;
+      }
     }
 
     setFieldErrors(nextErrors);
@@ -133,8 +155,16 @@ export function AssignmentsPage() {
       userId: Number(values.userId),
       taskId: Number(values.taskId),
       scheduleId: Number(values.scheduleId),
-      startDateTime: values.startDateTime,
-      endDateTime: values.endDateTime,
+      startDateTime: joinDateOptionalTime(
+        values.startDate,
+        values.startTime,
+        START_OF_DAY,
+      )!,
+      endDateTime: joinDateOptionalTime(
+        values.endDate,
+        values.endTime,
+        END_OF_DAY,
+      )!,
       status: values.status,
     };
 
@@ -332,26 +362,50 @@ export function AssignmentsPage() {
             </div>
 
             <div className="form-row">
-              <FormField label="From" htmlFor="assign-start" required error={fieldErrors.startDateTime}>
-                <input
+              <FormField
+                label="From"
+                htmlFor="assign-start"
+                required
+                hint={
+                  values.startDate
+                    ? `Will start at ${values.startTime || START_OF_DAY}`
+                    : 'Optional — leave the time empty for start of day (00:00)'
+                }
+                error={fieldErrors.startDate}
+              >
+                <DateOptionalTimeInput
                   id="assign-start"
-                  type="datetime-local"
-                  value={values.startDateTime}
-                  onChange={(e) =>
-                    setValues({ ...values, startDateTime: e.target.value })
+                  timeLabel="From time"
+                  dateValue={values.startDate}
+                  timeValue={values.startTime}
+                  onDateChange={(date) =>
+                    setValues({ ...values, startDate: date })
+                  }
+                  onTimeChange={(time) =>
+                    setValues({ ...values, startTime: time })
                   }
                   disabled={saving}
                 />
               </FormField>
 
-              <FormField label="To" htmlFor="assign-end" required error={fieldErrors.endDateTime}>
-                <input
+              <FormField
+                label="To"
+                htmlFor="assign-end"
+                required
+                hint={
+                  values.endDate
+                    ? `Will end at ${values.endTime || END_OF_DAY}`
+                    : 'Optional — leave the time empty for end of day (23:59)'
+                }
+                error={fieldErrors.endDate}
+              >
+                <DateOptionalTimeInput
                   id="assign-end"
-                  type="datetime-local"
-                  value={values.endDateTime}
-                  onChange={(e) =>
-                    setValues({ ...values, endDateTime: e.target.value })
-                  }
+                  timeLabel="To time"
+                  dateValue={values.endDate}
+                  timeValue={values.endTime}
+                  onDateChange={(date) => setValues({ ...values, endDate: date })}
+                  onTimeChange={(time) => setValues({ ...values, endTime: time })}
                   disabled={saving}
                 />
               </FormField>

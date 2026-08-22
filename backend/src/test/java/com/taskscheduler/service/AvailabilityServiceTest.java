@@ -4,7 +4,6 @@ import com.taskscheduler.domain.entity.Availability;
 import com.taskscheduler.domain.entity.Unavailability;
 import com.taskscheduler.domain.entity.User;
 import com.taskscheduler.domain.repository.AvailabilityRepository;
-import com.taskscheduler.domain.repository.UnavailabilityRepository;
 import com.taskscheduler.domain.repository.UserRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
@@ -34,9 +33,6 @@ class AvailabilityServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    @Mock
-    private UnavailabilityRepository unavailabilityRepository;
-
     @InjectMocks
     private AvailabilityServiceImpl availabilityService;
 
@@ -60,12 +56,6 @@ class AvailabilityServiceTest {
 
         when(userRepository.existsById(1L)).thenReturn(true);
 
-        when(unavailabilityRepository
-                .existsByUserIdAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
-                        eq(1L),
-                        any(LocalDateTime.class),
-                        any(LocalDateTime.class)))
-                .thenReturn(false);
 
         when(availabilityRepository.save(availability))
                 .thenReturn(availability);
@@ -91,7 +81,6 @@ class AvailabilityServiceTest {
 
         verifyNoInteractions(userRepository);
         verifyNoInteractions(availabilityRepository);
-        verifyNoInteractions(unavailabilityRepository);
     }
 
     @Test
@@ -105,7 +94,6 @@ class AvailabilityServiceTest {
 
         verifyNoInteractions(userRepository);
         verifyNoInteractions(availabilityRepository);
-        verifyNoInteractions(unavailabilityRepository);
     }
 
     @Test
@@ -125,7 +113,6 @@ class AvailabilityServiceTest {
 
         verifyNoInteractions(userRepository);
         verifyNoInteractions(availabilityRepository);
-        verifyNoInteractions(unavailabilityRepository);
     }
 
     @Test
@@ -145,33 +132,60 @@ class AvailabilityServiceTest {
         );
 
         verify(availabilityRepository, never()).save(any());
-        verifyNoInteractions(unavailabilityRepository);
     }
 
     @Test
-    void shouldRejectOverlapWithUnavailability() {
+    void shouldAllowAvailabilityOverlappingUnavailability() {
+        // Effective availability = availability - unavailability, computed by
+        // the scheduling engine; overlapping is therefore allowed.
         when(user.getId()).thenReturn(1L);
 
         when(userRepository.existsById(1L)).thenReturn(true);
 
-        when(unavailabilityRepository
-                .existsByUserIdAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
-                        eq(1L),
-                        any(LocalDateTime.class),
-                        any(LocalDateTime.class)))
+        when(availabilityRepository.save(availability))
+                .thenReturn(availability);
+
+        Availability result = availabilityService.create(availability);
+
+        assertSame(availability, result);
+        verify(availabilityRepository).save(availability);
+    }
+
+    @Test
+    void updateShouldAllowAvailabilityOverlappingUnavailability() {
+        when(user.getId()).thenReturn(1L);
+
+        Availability existing = new Availability(
+                user,
+                LocalDateTime.of(2026, 8, 20, 9, 0),
+                LocalDateTime.of(2026, 8, 20, 12, 0)
+        );
+
+        when(availabilityRepository.findById(1L))
+                .thenReturn(Optional.of(existing));
+
+        when(userRepository.existsById(1L))
                 .thenReturn(true);
 
-        BusinessRuleException exception = assertThrows(
-                BusinessRuleException.class,
-                () -> availabilityService.create(availability)
+        when(availabilityRepository.save(existing))
+                .thenReturn(existing);
+
+        availability.setStartDateTime(
+                LocalDateTime.of(2026, 8, 20, 10, 0)
         );
+
+        availability.setEndDateTime(
+                LocalDateTime.of(2026, 8, 20, 18, 0)
+        );
+
+        Availability result =
+                availabilityService.update(1L, availability);
 
         assertEquals(
-                "Availability overlaps an existing unavailability",
-                exception.getMessage()
+                LocalDateTime.of(2026, 8, 20, 10, 0),
+                result.getStartDateTime()
         );
-
-        verify(availabilityRepository, never()).save(any());
+        verify(availabilityRepository).save(existing);
     }
 
     @Test
@@ -234,12 +248,6 @@ class AvailabilityServiceTest {
         when(userRepository.existsById(1L))
                 .thenReturn(true);
 
-        when(unavailabilityRepository
-                .existsByUserIdAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
-                        eq(1L),
-                        any(LocalDateTime.class),
-                        any(LocalDateTime.class)))
-                .thenReturn(false);
 
         when(availabilityRepository.save(existing))
                 .thenReturn(existing);

@@ -122,10 +122,7 @@ describe('TasksPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /new task/i }));
     await userEvent.type(screen.getByLabelText(/^title/i), 'New feature');
-    await userEvent.type(
-      screen.getByLabelText(/estimated duration/i),
-      '60',
-    );
+    await userEvent.type(screen.getByLabelText(/^estimated duration/i), '60');
     await userEvent.click(screen.getByRole('button', { name: /create task/i }));
 
     await waitFor(() => {
@@ -137,6 +134,154 @@ describe('TasksPage', () => {
       estimatedDurationMinutes: 60,
       deadline: null,
     });
+  });
+
+  it('sends the picked deadline when date and time are both set', async () => {
+    seedAuth('ADMIN');
+    createTaskMock.mockResolvedValue({ ...SAMPLE_TASK, id: 27 });
+    await renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /new task/i }));
+    await userEvent.type(screen.getByLabelText(/^title/i), 'With deadline');
+    await userEvent.type(screen.getByLabelText(/^estimated duration/i), '45');
+    await userEvent.type(screen.getByLabelText('Deadline'), '2026-09-20');
+    await userEvent.type(screen.getByLabelText('Deadline time'), '14:30');
+    await userEvent.click(screen.getByRole('button', { name: /create task/i }));
+
+    await waitFor(() => {
+      expect(createTaskMock).toHaveBeenCalledTimes(1);
+    });
+    expect(createTaskMock.mock.calls[0][0]).toMatchObject({
+      title: 'With deadline',
+      deadline: '2026-09-20T14:30',
+    });
+  });
+
+  it('interprets a deadline without a time as end of day', async () => {
+    seedAuth('ADMIN');
+    createTaskMock.mockResolvedValue({ ...SAMPLE_TASK, id: 29 });
+    await renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /new task/i }));
+    await userEvent.type(screen.getByLabelText(/^title/i), 'Date only');
+    await userEvent.type(screen.getByLabelText(/^estimated duration/i), '30');
+    await userEvent.type(screen.getByLabelText('Deadline'), '2026-09-20');
+    await userEvent.click(screen.getByRole('button', { name: /create task/i }));
+
+    await waitFor(() => {
+      expect(createTaskMock).toHaveBeenCalledTimes(1);
+    });
+    expect(createTaskMock.mock.calls[0][0]).toMatchObject({
+      title: 'Date only',
+      deadline: '2026-09-20T23:59',
+    });
+  });
+
+  it('rejects a deadline time without a date', async () => {
+    seedAuth('ADMIN');
+    await renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /new task/i }));
+    await userEvent.type(screen.getByLabelText(/^title/i), 'Guarded task');
+    await userEvent.type(screen.getByLabelText(/^estimated duration/i), '30');
+    await userEvent.type(screen.getByLabelText('Deadline time'), '14:30');
+
+    await userEvent.click(screen.getByRole('button', { name: /create task/i }));
+
+    expect(
+      await screen.findByText(
+        'Pick a date for the deadline, or remove the time.',
+      ),
+    ).toBeInTheDocument();
+    expect(createTaskMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts durations expressed in hours', async () => {
+    seedAuth('ADMIN');
+    createTaskMock.mockResolvedValue({ ...SAMPLE_TASK, id: 30 });
+    await renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /new task/i }));
+    await userEvent.type(screen.getByLabelText(/^title/i), 'Two hours');
+    await userEvent.type(screen.getByLabelText(/^estimated duration/i), '2');
+    await userEvent.selectOptions(
+      screen.getByLabelText('Duration unit'),
+      'hours',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /create task/i }));
+
+    await waitFor(() => {
+      expect(createTaskMock).toHaveBeenCalledTimes(1);
+    });
+    expect(createTaskMock.mock.calls[0][0]).toMatchObject({
+      title: 'Two hours',
+      estimatedDurationMinutes: 120,
+    });
+  });
+
+  it('accepts fractional hours and rounds to whole minutes', async () => {
+    seedAuth('ADMIN');
+    createTaskMock.mockResolvedValue({ ...SAMPLE_TASK, id: 31 });
+    await renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /new task/i }));
+    await userEvent.type(screen.getByLabelText(/^title/i), 'Half hour');
+    await userEvent.selectOptions(
+      screen.getByLabelText('Duration unit'),
+      'hours',
+    );
+    await userEvent.type(screen.getByLabelText(/^estimated duration/i), '1.5');
+    await userEvent.click(screen.getByRole('button', { name: /create task/i }));
+
+    await waitFor(() => {
+      expect(createTaskMock).toHaveBeenCalledTimes(1);
+    });
+    expect(createTaskMock.mock.calls[0][0]).toMatchObject({
+      estimatedDurationMinutes: 90,
+    });
+  });
+
+  it('blocks submission when the browser sanitizes an invalid duration', async () => {
+    seedAuth('ADMIN');
+    await renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /new task/i }));
+    await userEvent.type(screen.getByLabelText(/^title/i), 'Broken amount');
+    // browsers reduce an invalid number literal such as "2e" to an empty value
+    await userEvent.type(screen.getByLabelText(/^estimated duration/i), '2e');
+    await userEvent.click(screen.getByRole('button', { name: /create task/i }));
+
+    expect(
+      await screen.findByText('This field is required.'),
+    ).toBeInTheDocument();
+    expect(createTaskMock).not.toHaveBeenCalled();
+  });
+
+  it('prefills whole-hour durations in hours when editing', async () => {
+    seedAuth('ADMIN');
+    listTasksMock.mockResolvedValue([
+      { ...SAMPLE_TASK, id: 40, estimatedDurationMinutes: 120 },
+    ]);
+    await renderPage();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Edit' }),
+    );
+
+    expect(screen.getByLabelText(/^estimated duration/i)).toHaveValue(2);
+    expect(screen.getByLabelText('Duration unit')).toHaveValue('hours');
+  });
+
+  it('prefills non-whole-hour durations in minutes when editing', async () => {
+    seedAuth('ADMIN');
+    await renderPage();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Edit' }),
+    );
+
+    expect(screen.getByLabelText(/^estimated duration/i)).toHaveValue(90);
+    expect(screen.getByLabelText('Duration unit')).toHaveValue('minutes');
   });
 
   it('surfaces server errors on failed creation', async () => {

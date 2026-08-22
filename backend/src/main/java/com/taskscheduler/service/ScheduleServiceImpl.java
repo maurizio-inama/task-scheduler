@@ -1,9 +1,13 @@
 package com.taskscheduler.service;
 
+import com.taskscheduler.domain.entity.Assignment;
 import com.taskscheduler.domain.entity.Schedule;
 import com.taskscheduler.domain.entity.ScheduleStatus;
+import com.taskscheduler.domain.entity.Task;
+import com.taskscheduler.domain.entity.TaskStatus;
 import com.taskscheduler.domain.repository.AssignmentRepository;
 import com.taskscheduler.domain.repository.ScheduleRepository;
+import com.taskscheduler.domain.repository.TaskRepository;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
 import com.taskscheduler.exception.ValidationException;
@@ -17,13 +21,16 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
     private final AssignmentRepository assignmentRepository;
+    private final TaskRepository taskRepository;
 
     public ScheduleServiceImpl(
             ScheduleRepository scheduleRepository,
-            AssignmentRepository assignmentRepository
+            AssignmentRepository assignmentRepository,
+            TaskRepository taskRepository
     ) {
         this.scheduleRepository = scheduleRepository;
         this.assignmentRepository = assignmentRepository;
+        this.taskRepository = taskRepository;
     }
 
     @Override
@@ -70,8 +77,20 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Transactional
     public void delete(Long id) {
         Schedule schedule = getById(id);
-        assignmentRepository.deleteAll(
-                assignmentRepository.findByScheduleId(id));
+
+        List<Assignment> assignments =
+                assignmentRepository.findByScheduleId(id);
+
+        assignments.stream()
+                .map(Assignment::getTask)
+                .filter(task -> task.getStatus() == TaskStatus.SCHEDULED)
+                .distinct()
+                .forEach(task -> {
+                    task.setStatus(TaskStatus.PENDING);
+                    taskRepository.save(task);
+                });
+
+        assignmentRepository.deleteAll(assignments);
         scheduleRepository.delete(schedule);
     }
 

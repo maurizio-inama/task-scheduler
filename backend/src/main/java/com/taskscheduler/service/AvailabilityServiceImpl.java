@@ -2,14 +2,11 @@ package com.taskscheduler.service;
 
 import com.taskscheduler.domain.entity.Availability;
 import com.taskscheduler.domain.repository.AvailabilityRepository;
-import com.taskscheduler.domain.repository.UnavailabilityRepository;
 import com.taskscheduler.domain.repository.UserRepository;
-import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
 import com.taskscheduler.exception.ValidationException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -17,15 +14,12 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     private final AvailabilityRepository availabilityRepository;
     private final UserRepository userRepository;
-    private final UnavailabilityRepository unavailabilityRepository;
 
     public AvailabilityServiceImpl(
             AvailabilityRepository availabilityRepository,
-            UserRepository userRepository,
-            UnavailabilityRepository unavailabilityRepository) {
+            UserRepository userRepository) {
         this.availabilityRepository = availabilityRepository;
         this.userRepository = userRepository;
-        this.unavailabilityRepository = unavailabilityRepository;
     }
 
     @Override
@@ -39,8 +33,6 @@ public class AvailabilityServiceImpl implements AvailabilityService {
                     "User not found: " + userId
             );
         }
-
-        checkUnavailabilityOverlap(availability);
 
         return availabilityRepository.save(availability);
     }
@@ -73,8 +65,6 @@ public class AvailabilityServiceImpl implements AvailabilityService {
                     "User not found: " + userId
             );
         }
-
-        checkUnavailabilityOverlap(availability);
 
         existing.setUser(availability.getUser());
         existing.setStartDateTime(availability.getStartDateTime());
@@ -119,26 +109,6 @@ public class AvailabilityServiceImpl implements AvailabilityService {
                 .isBefore(availability.getEndDateTime())) {
             throw new ValidationException(
                     "Start date/time must be before end date/time"
-            );
-        }
-    }
-
-    private void checkUnavailabilityOverlap(Availability availability) {
-
-        Long userId = availability.getUser().getId();
-        LocalDateTime start = availability.getStartDateTime();
-        LocalDateTime end = availability.getEndDateTime();
-
-        boolean overlaps = unavailabilityRepository
-                .existsByUserIdAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
-                        userId,
-                        end,
-                        start
-                );
-
-        if (overlaps) {
-            throw new BusinessRuleException(
-                    "Availability overlaps an existing unavailability"
             );
         }
     }

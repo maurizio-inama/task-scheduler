@@ -186,6 +186,30 @@ a {
   width: 100%;
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  padding: 0.45rem 0.4rem;
+}
+
+.input-with-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-with-action input {
+  flex: 1 1 0;
+  min-width: 6rem;
+}
+
+.input-with-action select {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 /* Tables */
 .data-table {
   width: 100%;

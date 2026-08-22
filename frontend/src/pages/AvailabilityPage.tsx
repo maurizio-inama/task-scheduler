@@ -2,12 +2,19 @@ import { useState, type FormEvent } from 'react';
 import { ApiRequestError } from '../api/client';
 import { availabilityApi } from '../api/availabilityApi';
 import { usersApi } from '../api/usersApi';
+import { DateOptionalTimeInput } from '../components/DateOptionalTimeInput';
 import { EmptyState } from '../components/EmptyState';
 import { FormField } from '../components/FormField';
 import { Loading } from '../components/Loading';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
-import { formatDateTime, toDateTimeInputValue } from '../utils/format';
+import { formatDateTime } from '../utils/format';
+import {
+  END_OF_DAY,
+  START_OF_DAY,
+  joinDateOptionalTime,
+  splitDateTime,
+} from '../utils/datetime';
 import {
   validateDateRange,
   validateRequiredFields,
@@ -17,14 +24,18 @@ import type { Availability, AvailabilityInput, User } from '../types/api';
 
 interface FormValues {
   userId: string;
-  startDateTime: string;
-  endDateTime: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
 }
 
 const EMPTY_FORM: FormValues = {
   userId: '',
-  startDateTime: '',
-  endDateTime: '',
+  startDate: '',
+  startTime: '',
+  endDate: '',
+  endTime: '',
 };
 
 export function AvailabilityPage() {
@@ -73,8 +84,10 @@ export function AvailabilityPage() {
     setEditing(entry);
     setValues({
       userId: String(entry.userId),
-      startDateTime: toDateTimeInputValue(entry.startDateTime),
-      endDateTime: toDateTimeInputValue(entry.endDateTime),
+      startDate: splitDateTime(entry.startDateTime).date,
+      startTime: splitDateTime(entry.startDateTime).time,
+      endDate: splitDateTime(entry.endDateTime).date,
+      endTime: splitDateTime(entry.endDateTime).time,
     });
     setFieldErrors({});
     setActionError(null);
@@ -89,10 +102,10 @@ export function AvailabilityPage() {
   const validate = (): boolean => {
     const nextErrors = validateRequiredFields(
       {
-        startDateTime: values.startDateTime,
-        endDateTime: values.endDateTime,
+        startDate: values.startDate,
+        endDate: values.endDate,
       },
-      ['startDateTime', 'endDateTime'],
+      ['startDate', 'endDate'],
     ) as Errors<FormValues>;
 
     if (!isAdmin && !values.userId) {
@@ -102,12 +115,21 @@ export function AvailabilityPage() {
       nextErrors.userId = 'Select a user.';
     }
 
-    const rangeError = validateDateRange(
-      values.startDateTime,
-      values.endDateTime,
+    const start = joinDateOptionalTime(
+      values.startDate,
+      values.startTime,
+      START_OF_DAY,
     );
-    if (rangeError) {
-      nextErrors.endDateTime = rangeError;
+    const end = joinDateOptionalTime(
+      values.endDate,
+      values.endTime,
+      END_OF_DAY,
+    );
+    if (start && end) {
+      const rangeError = validateDateRange(start, end);
+      if (rangeError) {
+        nextErrors.endDate = rangeError;
+      }
     }
 
     setFieldErrors(nextErrors);
@@ -123,8 +145,16 @@ export function AvailabilityPage() {
 
     const input: AvailabilityInput = {
       userId: targetUserId(),
-      startDateTime: values.startDateTime,
-      endDateTime: values.endDateTime,
+      startDateTime: joinDateOptionalTime(
+        values.startDate,
+        values.startTime,
+        START_OF_DAY,
+      )!,
+      endDateTime: joinDateOptionalTime(
+        values.endDate,
+        values.endTime,
+        END_OF_DAY,
+      )!,
     };
 
     setSaving(true);
@@ -272,26 +302,50 @@ export function AvailabilityPage() {
             )}
 
             <div className="form-row">
-              <FormField label="From" htmlFor="avail-start" required error={fieldErrors.startDateTime}>
-                <input
+              <FormField
+                label="From"
+                htmlFor="avail-start"
+                required
+                hint={
+                  values.startDate
+                    ? `Will start at ${values.startTime || START_OF_DAY}`
+                    : 'Optional — leave the time empty for start of day (00:00)'
+                }
+                error={fieldErrors.startDate}
+              >
+                <DateOptionalTimeInput
                   id="avail-start"
-                  type="datetime-local"
-                  value={values.startDateTime}
-                  onChange={(e) =>
-                    setValues({ ...values, startDateTime: e.target.value })
+                  timeLabel="From time"
+                  dateValue={values.startDate}
+                  timeValue={values.startTime}
+                  onDateChange={(date) =>
+                    setValues({ ...values, startDate: date })
+                  }
+                  onTimeChange={(time) =>
+                    setValues({ ...values, startTime: time })
                   }
                   disabled={saving}
                 />
               </FormField>
 
-              <FormField label="To" htmlFor="avail-end" required error={fieldErrors.endDateTime}>
-                <input
+              <FormField
+                label="To"
+                htmlFor="avail-end"
+                required
+                hint={
+                  values.endDate
+                    ? `Will end at ${values.endTime || END_OF_DAY}`
+                    : 'Optional — leave the time empty for end of day (23:59)'
+                }
+                error={fieldErrors.endDate}
+              >
+                <DateOptionalTimeInput
                   id="avail-end"
-                  type="datetime-local"
-                  value={values.endDateTime}
-                  onChange={(e) =>
-                    setValues({ ...values, endDateTime: e.target.value })
-                  }
+                  timeLabel="To time"
+                  dateValue={values.endDate}
+                  timeValue={values.endTime}
+                  onDateChange={(date) => setValues({ ...values, endDate: date })}
+                  onTimeChange={(time) => setValues({ ...values, endTime: time })}
                   disabled={saving}
                 />
               </FormField>
