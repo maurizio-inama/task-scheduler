@@ -34,6 +34,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -579,6 +580,226 @@ class SystemIntegrationTest {
                             .isBefore(LocalDateTime.of(2026, 9, 9, 12, 0)));
             assertThat(placedInFreeWindow).isTrue();
         });
+    }
+
+    // ------------------------------------------------------------------
+    // Admin JSON scenario import: REST → importer → services → PostgreSQL
+    // ------------------------------------------------------------------
+
+    private org.springframework.mock.web.MockMultipartFile scenario(
+            String json) {
+        return new org.springframework.mock.web.MockMultipartFile(
+                "file",
+                "scenario.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                json.getBytes()
+        );
+    }
+
+    private long countUsersWithPrefix(String prefix) {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getUsername().startsWith(prefix))
+                .count();
+    }
+
+    @Test
+    void adminImportPersistsScenarioThroughRestAndSchedulesTasks()
+            throws Exception {
+        newUser(adminUsername, Role.ADMIN, true);
+        String adminToken = login(adminUsername);
+
+        String json = """
+                {
+                  "scenario": {
+                    "id": "it-import-%s",
+                    "name": "Integration Import",
+                    "description": "created by SystemIntegrationTest"
+                  },
+                  "users": [
+                    {"username": "imp-op1-%s", "password": "secret-123",
+                     "firstName": "Imp", "lastName": "One",
+                     "email": "imp-op1-%s@example.com",
+                     "role": "OPERATOR", "enabled": true},
+                    {"username": "imp-op2-%s", "password": "secret-123",
+                     "firstName": "Imp", "lastName": "Two",
+                     "email": "imp-op2-%s@example.com",
+                     "role": "OPERATOR", "enabled": true}
+                  ],
+                  "tasks": [
+                    {"title": "imported-task-%s", "description": null,
+                     "priority": "HIGH", "estimatedDurationMinutes": 120,
+                     "deadline": "2026-09-18T17:00:00"}
+                  ],
+                  "availabilities": [
+                    {"username": "imp-op1-%s",
+                     "startDateTime": "2026-09-14T08:00:00",
+                     "endDateTime": "2026-09-14T18:00:00"},
+                    {"username": "imp-op2-%s",
+                     "startDateTime": "2026-09-14T08:00:00",
+                     "endDateTime": "2026-09-14T18:00:00"}
+                  ],
+                  "unavailabilities": [],
+                  "schedules": [
+                    {"startDateTime": "2026-09-14T08:00:00",
+                     "endDateTime": "2026-09-14T18:00:00"}
+                  ]
+                }
+                """.formatted(suffix, suffix, suffix, suffix, suffix,
+                suffix, suffix, suffix);
+
+        mockMvc.perform(multipart("/api/admin/import")
+                        .file(scenario(json))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scenarioId").value("it-import-" + suffix))
+                .andExpect(jsonPath("$.usersCreated").value(2))
+                .andExpect(jsonPath("$.tasksCreated").value(1))
+                .andExpect(jsonPath("$.availabilitiesCreated").value(2))
+                .andExpect(jsonPath("$.unavailabilitiesCreated").value(0))
+                .andExpect(jsonPath("$.schedulesCreated").value(1))
+                .andExpect(jsonPath("$.tasksScheduled").value(1));
+
+        transactionTemplate.executeWithoutResult(status -> {
+            User imported = userRepository.findByUsername(
+                    "imp-op1-" + suffix).orElseThrow();
+            assertThat(passwordEncoder.matches(
+                    "secret-123", imported.getPassword())).isTrue();
+
+            Task importedTask = taskRepository.findAll().stream()
+                    .filter(task ->
+                            task.getTitle().equals("imported-task-" + suffix))
+                    .findFirst().orElseThrow();
+            createdTaskIds.add(importedTask.getId());
+            assertThat(importedTask.getStatus())
+                    .isEqualTo(TaskStatus.SCHEDULED);
+        });
+
+        User firstOperator = userRepository.findByUsername(
+                "imp-op1-" + suffix).orElseThrow();
+        User secondOperator = userRepository.findByUsername(
+                "imp-op2-" + suffix).orElseThrow();
+        createdUserIds.add(firstOperator.getId());
+        createdUserIds.add(secondOperator.getId());
+        availabilityRepository.findByUserId(firstOperator.getId())
+                .forEach(availability ->
+                        createdAvailabilityIds.add(availability.getId()));
+        availabilityRepository.findByUserId(secondOperator.getId())
+                .forEach(availability ->
+                        createdAvailabilityIds.add(availability.getId()));
+
+        Schedule importedSchedule = scheduleRepository.findAll().stream()
+                .filter(schedule -> schedule.getStartDateTime()
+                        .equals(LocalDateTime.of(2026, 9, 14, 8, 0)))
+                .filter(schedule -> assignmentRepository
+                        .findByScheduleId(schedule.getId()).size() == 1)
+                .findFirst()
+                .orElseThrow();
+        createdScheduleIds.add(importedSchedule.getId());
+    }
+
+    @Test
+    void conflictingScenarioImportIsRejectedAtomically()
+            throws Exception {
+        User existing = newUser("clash-" + suffix, Role.OPERATOR, true);
+        newUser(adminUsername, Role.ADMIN, true);
+        String adminToken = login(adminUsername);
+
+        String json = """
+                {
+                  "scenario": {
+                    "id": "it-clash-%s",
+                    "name": "Conflicting Import"
+                  },
+                  "users": [
+                    {"username": "fresh-%s", "password": "secret-123",
+                     "firstName": "Fresh", "lastName": "One",
+                     "email": "fresh-%s@example.com",
+                     "role": "OPERATOR", "enabled": true}
+                  ],
+                  "tasks": [
+                    {"title": "clash-task-%s", "description": null,
+                     "priority": "LOW", "estimatedDurationMinutes": 60,
+                     "deadline": null}
+                  ],
+                  "availabilities": [],
+                  "unavailabilities": []
+                }
+                """.formatted(suffix, suffix, suffix, suffix);
+
+        String conflictingJson = json.replace(
+                "\"fresh-%s\"".formatted(suffix),
+                "\"clash-" + suffix + "\""
+        ).replace(
+                "fresh-%s@example.com".formatted(suffix),
+                existing.getEmail()
+        );
+
+        mockMvc.perform(multipart("/api/admin/import/validate")
+                        .file(scenario(conflictingJson))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.status").value("CONFLICT"))
+                .andExpect(jsonPath("$.problems[0]").value(
+                        org.hamcrest.Matchers.containsString(
+                                "'clash-" + suffix + "' already exists")));
+
+        mockMvc.perform(multipart("/api/admin/import")
+                        .file(scenario(conflictingJson))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("IMPORT_REJECTED"))
+                .andExpect(jsonPath("$.kind").value("CONFLICT"))
+                .andExpect(jsonPath("$.problems[0]").value(
+                        org.hamcrest.Matchers.containsString(
+                                "'clash-" + suffix + "' already exists")));
+
+        transactionTemplate.executeWithoutResult(status -> {
+            assertThat(countUsersWithPrefix("fresh-" + suffix)).isZero();
+            assertThat(taskRepository.findAll().stream()
+                    .noneMatch(task -> task.getTitle()
+                            .equals("clash-task-" + suffix))).isTrue();
+        });
+    }
+
+    @Test
+    void malformedScenarioImportIsRejectedWithoutSideEffects() throws Exception {
+        newUser(adminUsername, Role.ADMIN, true);
+        String adminToken = login(adminUsername);
+
+        mockMvc.perform(multipart("/api/admin/import")
+                        .file(scenario("{ this is not json "))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("IMPORT_REJECTED"))
+                .andExpect(jsonPath("$.kind").value("MALFORMED"));
+    }
+
+    @Test
+    void nonAdminCannotImportScenariosThroughRest() throws Exception {
+        newUser(operatorUsername, Role.OPERATOR, true);
+        String operatorToken = login(operatorUsername);
+
+        String json = """
+                {
+                  "scenario": {"id": "nope-%s", "name": "Nope"},
+                  "users": [
+                    {"username": "blocked-%s", "password": "secret-123",
+                     "firstName": "Blocked", "lastName": "User",
+                     "email": "blocked-%s@example.com",
+                     "role": "OPERATOR", "enabled": true}
+                  ]
+                }
+                """.formatted(suffix, suffix, suffix);
+
+        mockMvc.perform(multipart("/api/admin/import")
+                        .file(scenario(json))
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+
+        transactionTemplate.executeWithoutResult(status ->
+                assertThat(countUsersWithPrefix("blocked-" + suffix)).isZero());
     }
 
     private Task persistTask(String title, int minutes, TaskPriority priority) {

@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/schedules', label: 'Schedules' },
   { to: '/assignments', label: 'Assignments' },
   { to: '/users', label: 'Users', roles: ['ADMIN'] },
+  { to: '/admin/import', label: 'Data Import', roles: ['ADMIN'] },
 ];
 
 export function Layout() {

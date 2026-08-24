@@ -1,12 +1,15 @@
 package com.taskscheduler.controller;
 
+import com.taskscheduler.controller.dto.ImportErrorResponse;
 import com.taskscheduler.exception.BusinessRuleException;
 import com.taskscheduler.exception.EntityNotFoundException;
 import com.taskscheduler.exception.ValidationException;
+import com.taskscheduler.importer.ImportRejectedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
@@ -139,6 +143,45 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 "NOT_FOUND",
                 "Resource not found",
+                request
+        );
+    }
+
+    @ExceptionHandler(ImportRejectedException.class)
+    public ResponseEntity<ImportErrorResponse> handleImportRejected(
+            ImportRejectedException ex,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = switch (ex.getKind()) {
+            case MALFORMED -> HttpStatus.BAD_REQUEST;
+            case INVALID -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case CONFLICT -> HttpStatus.CONFLICT;
+        };
+
+        return ResponseEntity.status(status).body(
+                new ImportErrorResponse(
+                        status.value(),
+                        "IMPORT_REJECTED",
+                        ex.getKind().name(),
+                        ex.getScenarioId(),
+                        ex.getProblems(),
+                        request.getRequestURI(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleMissingPart(
+            MissingServletRequestPartException ex,
+            HttpServletRequest request
+    ) {
+        return build(
+                HttpStatus.BAD_REQUEST,
+                "BAD_REQUEST",
+                "Required request part '" + ex.getRequestPartName()
+                        + "' is missing",
                 request
         );
     }

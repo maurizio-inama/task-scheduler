@@ -1,0 +1,193 @@
+{
+  "scenario": {
+    "id": "demo-priority-deadlines",
+    "name": "Priority and Deadlines Demo",
+    "description": "Three operators with limited daily capacity, ten tasks of mixed priority and deadline pressure, split across two half-week schedules so scheduling decisions visibly trade off priority against deadlines."
+  },
+  "users": [
+    {
+      "username": "nadia_prio",
+      "password": "admin",
+      "firstName": "Nadia",
+      "lastName": "Petrov",
+      "email": "nadia.prio@demodata.local",
+      "role": "ADMIN",
+      "enabled": true
+    },
+    {
+      "username": "omar_prio",
+      "password": "admin",
+      "firstName": "Omar",
+      "lastName": "Haddad",
+      "email": "omar.prio@demodata.local",
+      "role": "REVIEWER",
+      "enabled": true
+    },
+    {
+      "username": "alice_prio",
+      "password": "admin",
+      "firstName": "Alice",
+      "lastName": "Fontana",
+      "email": "alice.prio@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    },
+    {
+      "username": "bob_prio",
+      "password": "admin",
+      "firstName": "Bob",
+      "lastName": "Marchetti",
+      "email": "bob.prio@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    },
+    {
+      "username": "charlie_prio",
+      "password": "admin",
+      "firstName": "Charlie",
+      "lastName": "Nguyen",
+      "email": "charlie.prio@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Patch critical vulnerability CVE-2026-31337",
+      "description": "Apply the vendor patch to internet-facing services and verify with a rescan.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 120,
+      "deadline": "2026-09-07T14:00:00"
+    },
+    {
+      "title": "Finalize investor update deck",
+      "description": "Consolidate metrics appendix and narrative for the September investor update.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 180,
+      "deadline": "2026-09-08T14:00:00"
+    },
+    {
+      "title": "Draft SLA amendment for Initech",
+      "description": "Propose revised response-time targets reflecting the new premium tier.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 150,
+      "deadline": "2026-09-09T14:00:00"
+    },
+    {
+      "title": "Prepare customer advisory board agenda",
+      "description": "Collect topics from account teams and sequence the advisory-board sessions.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 120,
+      "deadline": "2026-09-10T17:00:00"
+    },
+    {
+      "title": "Reconcile August inventory count",
+      "description": "Match warehouse counts against ERP records and document variances.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 210,
+      "deadline": "2026-09-10T14:00:00"
+    },
+    {
+      "title": "Plan October release communications",
+      "description": "Outline announcement, changelog and customer-email timeline for the October release.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 90,
+      "deadline": "2026-09-11T14:00:00"
+    },
+    {
+      "title": "Migrate legacy reports to new BI tool",
+      "description": "Port the ten most-used legacy reports and validate numbers against the old system.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 300,
+      "deadline": "2026-09-30T17:00:00"
+    },
+    {
+      "title": "Review Q3 expense reports",
+      "description": "First-pass review of Q3 expense submissions before finance approval.",
+      "priority": "LOW",
+      "estimatedDurationMinutes": 240,
+      "deadline": "2026-09-11T14:00:00"
+    },
+    {
+      "title": "Update runbook for billing service",
+      "description": "Refresh operational runbook after the billing service refactor.",
+      "priority": "LOW",
+      "estimatedDurationMinutes": 180,
+      "deadline": "2026-09-30T17:00:00"
+    },
+    {
+      "title": "Archive completed audit evidence",
+      "description": "Move closed audit items into the cold-storage archive per retention policy.",
+      "priority": "LOW",
+      "estimatedDurationMinutes": 60,
+      "deadline": "2026-09-25T17:00:00"
+    }
+  ],
+  "availabilities": [
+    {
+      "username": "alice_prio",
+      "startDateTime": "2026-09-07T09:00:00",
+      "endDateTime": "2026-09-07T14:00:00"
+    },
+    {
+      "username": "alice_prio",
+      "startDateTime": "2026-09-08T09:00:00",
+      "endDateTime": "2026-09-08T14:00:00"
+    },
+    {
+      "username": "alice_prio",
+      "startDateTime": "2026-09-09T09:00:00",
+      "endDateTime": "2026-09-09T14:00:00"
+    },
+    {
+      "username": "bob_prio",
+      "startDateTime": "2026-09-09T09:00:00",
+      "endDateTime": "2026-09-09T14:00:00"
+    },
+    {
+      "username": "bob_prio",
+      "startDateTime": "2026-09-10T09:00:00",
+      "endDateTime": "2026-09-10T14:00:00"
+    },
+    {
+      "username": "charlie_prio",
+      "startDateTime": "2026-09-07T09:00:00",
+      "endDateTime": "2026-09-07T14:00:00"
+    },
+    {
+      "username": "charlie_prio",
+      "startDateTime": "2026-09-11T09:00:00",
+      "endDateTime": "2026-09-11T14:00:00"
+    }
+  ],
+  "unavailabilities": [
+    {
+      "username": "alice_prio",
+      "startDateTime": "2026-09-08T12:00:00",
+      "endDateTime": "2026-09-08T14:00:00",
+      "reason": "Doctor appointment"
+    },
+    {
+      "username": "bob_prio",
+      "startDateTime": "2026-09-10T09:00:00",
+      "endDateTime": "2026-09-10T11:00:00",
+      "reason": "Candidate interviews panel"
+    },
+    {
+      "username": "charlie_prio",
+      "startDateTime": "2026-09-11T13:00:00",
+      "endDateTime": "2026-09-11T14:00:00",
+      "reason": "Office sync (mandatory)"
+    }
+  ],
+  "schedules": [
+    {
+      "startDateTime": "2026-09-07T08:00:00",
+      "endDateTime": "2026-09-09T18:00:00"
+    },
+    {
+      "startDateTime": "2026-09-10T08:00:00",
+      "endDateTime": "2026-09-11T18:00:00"
+    }
+  ]
+}

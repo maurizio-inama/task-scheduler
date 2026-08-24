@@ -1,5 +1,6 @@
 package com.taskscheduler.security;
 
+import com.taskscheduler.controller.AdminImportController;
 import com.taskscheduler.controller.AuthController;
 import com.taskscheduler.controller.TaskController;
 import com.taskscheduler.controller.UserController;
@@ -10,7 +11,9 @@ import com.taskscheduler.domain.entity.Task;
 import com.taskscheduler.domain.entity.TaskPriority;
 import com.taskscheduler.domain.entity.TaskStatus;
 import com.taskscheduler.domain.entity.User;
+import com.taskscheduler.importer.ScenarioCatalog;
 import com.taskscheduler.service.AuthService;
+import com.taskscheduler.service.ScenarioImportService;
 import com.taskscheduler.service.TaskService;
 import com.taskscheduler.service.UserService;
 import io.jsonwebtoken.Jwts;
@@ -33,6 +36,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,7 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {
         TaskController.class,
         UserController.class,
-        AuthController.class
+        AuthController.class,
+        AdminImportController.class
 })
 @Import({SecurityConfig.class, JwtService.class})
 @TestPropertySource(properties = {
@@ -69,6 +74,12 @@ class SecurityAuthorizationTest {
 
     @MockitoBean
     private UserDetailsService userDetailsService;
+
+    @MockitoBean
+    private ScenarioImportService scenarioImportService;
+
+    @MockitoBean
+    private ScenarioCatalog scenarioCatalog;
 
     private String tokenFor(String username, Role role) {
         User user = new User(
@@ -298,5 +309,91 @@ class SecurityAuthorizationTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1));
+    }
+
+    // ------------------------------------------------------------------
+    // Admin data import: only ADMIN may validate or import
+    // ------------------------------------------------------------------
+
+    private org.springframework.mock.web.MockMultipartFile scenarioFile() {
+        return new org.springframework.mock.web.MockMultipartFile(
+                "file",
+                "scenario.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                "{\"scenario\": {\"id\": \"demo\", \"name\": \"Demo\"}}"
+                        .getBytes()
+        );
+    }
+
+    @Test
+    void operatorCannotValidateScenarioFile() throws Exception {
+        mockMvc.perform(multipart("/api/admin/import/validate")
+                        .file(scenarioFile())
+                        .header("Authorization",
+                                "Bearer " + tokenFor("bob", Role.OPERATOR)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reviewerCannotValidateScenarioFile() throws Exception {
+        mockMvc.perform(multipart("/api/admin/import/validate")
+                        .file(scenarioFile())
+                        .header("Authorization",
+                                "Bearer " + tokenFor("reviewer", Role.REVIEWER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void operatorCannotImportScenarioFile() throws Exception {
+        mockMvc.perform(multipart("/api/admin/import")
+                        .file(scenarioFile())
+                        .header("Authorization",
+                                "Bearer " + tokenFor("bob", Role.OPERATOR)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reviewerCannotImportBuiltInScenario() throws Exception {
+        mockMvc.perform(multipart("/api/admin/import/scenarios/demo-basic.json/import")
+                        .header("Authorization",
+                                "Bearer " + tokenFor("reviewer", Role.REVIEWER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unauthenticatedRequestToImportIsUnauthorized() throws Exception {
+        mockMvc.perform(multipart("/api/admin/import").file(scenarioFile()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminCanValidateAndImportScenarioFiles() throws Exception {
+        when(scenarioImportService.validate(any(
+                org.springframework.web.multipart.MultipartFile.class)))
+                .thenReturn(new com.taskscheduler.controller.dto.ValidationReport(
+                        true, "VALID", "demo", "Demo",
+                        new com.taskscheduler.controller.dto.ValidationReport
+                                .Counts(1, 0, 0, 0, 0),
+                        List.of()
+                ));
+        when(scenarioImportService.importScenario(any(
+                org.springframework.web.multipart.MultipartFile.class)))
+                .thenReturn(new com.taskscheduler.controller.dto.ImportResult(
+                        "demo", "Demo", 1, 0, 0, 0, 0, 0
+                ));
+
+        mockMvc.perform(multipart("/api/admin/import/validate")
+                        .file(scenarioFile())
+                        .header("Authorization",
+                                "Bearer " + tokenFor("alice", Role.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VALID"));
+
+        mockMvc.perform(multipart("/api/admin/import")
+                        .file(scenarioFile())
+                        .header("Authorization",
+                                "Bearer " + tokenFor("alice", Role.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usersCreated").value(1));
     }
 }

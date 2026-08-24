@@ -154,3 +154,40 @@ export interface GenerateResponse {
   assignments: Assignment[];
   unscheduledTasks: UnscheduledTaskInfo[];
 }
+
+export type ValidationStatus = 'VALID' | 'INVALID' | 'CONFLICT';
+
+export interface ValidationCounts {
+  users: number;
+  tasks: number;
+  availabilities: number;
+  unavailabilities: number;
+  schedules: number;
+}
+
+export interface ValidationReport {
+  valid: boolean;
+  status: ValidationStatus;
+  scenarioId: string | null;
+  scenarioName: string | null;
+  counts: ValidationCounts;
+  problems: string[];
+}
+
+export interface ImportResult {
+  scenarioId: string | null;
+  scenarioName: string | null;
+  usersCreated: number;
+  tasksCreated: number;
+  availabilitiesCreated: number;
+  unavailabilitiesCreated: number;
+  schedulesCreated: number;
+  tasksScheduled: number;
+}
+
+export interface ScenarioSummary {
+  fileName: string;
+  scenarioId: string | null;
+  name: string | null;
+  description: string | null;
+}

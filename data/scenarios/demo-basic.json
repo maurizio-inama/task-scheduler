@@ -1,0 +1,164 @@
+{
+  "scenario": {
+    "id": "demo-basic",
+    "name": "Basic Scheduling Demo",
+    "description": "Balanced scenario showing the normal workflow: five users, eight realistic business tasks and a one-week schedule filled by the scheduling engine."
+  },
+  "users": [
+    {
+      "username": "dana_basic",
+      "password": "admin",
+      "firstName": "Dana",
+      "lastName": "Reyes",
+      "email": "dana.basic@demodata.local",
+      "role": "ADMIN",
+      "enabled": true
+    },
+    {
+      "username": "evan_basic",
+      "password": "admin",
+      "firstName": "Evan",
+      "lastName": "Brooks",
+      "email": "evan.basic@demodata.local",
+      "role": "REVIEWER",
+      "enabled": true
+    },
+    {
+      "username": "alice_basic",
+      "password": "admin",
+      "firstName": "Alice",
+      "lastName": "Fontana",
+      "email": "alice.basic@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    },
+    {
+      "username": "bob_basic",
+      "password": "admin",
+      "firstName": "Bob",
+      "lastName": "Marchetti",
+      "email": "bob.basic@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    },
+    {
+      "username": "charlie_basic",
+      "password": "admin",
+      "firstName": "Charlie",
+      "lastName": "Nguyen",
+      "email": "charlie.basic@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Prepare monthly sales report",
+      "description": "Aggregate September pipeline numbers and produce the executive sales summary.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 240,
+      "deadline": "2026-09-11T17:00:00"
+    },
+    {
+      "title": "Review customer contract ACME renewal",
+      "description": "Legal review of the two-year ACME renewal including updated SLA terms.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 120,
+      "deadline": "2026-09-10T17:00:00"
+    },
+    {
+      "title": "Update product documentation FAQ",
+      "description": "Refresh the public FAQ with the answers added during August support rotation.",
+      "priority": "LOW",
+      "estimatedDurationMinutes": 180,
+      "deadline": "2026-09-25T17:00:00"
+    },
+    {
+      "title": "Investigate support issue #4821",
+      "description": "Customers report intermittent 502 errors on the checkout endpoint; identify root cause.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 120,
+      "deadline": "2026-09-09T17:00:00"
+    },
+    {
+      "title": "Prepare deployment checklist v2.4",
+      "description": "Rollout checklist for release 2.4 covering database migrations and rollback steps.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 90,
+      "deadline": "2026-09-11T12:00:00"
+    },
+    {
+      "title": "Validate invoice batch September",
+      "description": "Cross-check the September invoice batch against ERP totals before finance sign-off.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 150,
+      "deadline": "2026-09-10T12:00:00"
+    },
+    {
+      "title": "Analyze quarterly KPI dashboard",
+      "description": "Compare Q3 KPIs against targets and annotate deviations for the leadership review.",
+      "priority": "LOW",
+      "estimatedDurationMinutes": 210,
+      "deadline": "2026-09-30T17:00:00"
+    },
+    {
+      "title": "Draft onboarding guide for new hires",
+      "description": "First-draft handbook covering tooling access, team rituals and escalation paths.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 240,
+      "deadline": "2026-09-30T17:00:00"
+    }
+  ],
+  "availabilities": [
+    {
+      "username": "alice_basic",
+      "startDateTime": "2026-09-07T08:00:00",
+      "endDateTime": "2026-09-07T16:00:00"
+    },
+    {
+      "username": "alice_basic",
+      "startDateTime": "2026-09-09T08:00:00",
+      "endDateTime": "2026-09-09T16:00:00"
+    },
+    {
+      "username": "bob_basic",
+      "startDateTime": "2026-09-07T08:00:00",
+      "endDateTime": "2026-09-07T16:00:00"
+    },
+    {
+      "username": "bob_basic",
+      "startDateTime": "2026-09-08T08:00:00",
+      "endDateTime": "2026-09-08T16:00:00"
+    },
+    {
+      "username": "charlie_basic",
+      "startDateTime": "2026-09-07T09:00:00",
+      "endDateTime": "2026-09-07T17:00:00"
+    },
+    {
+      "username": "charlie_basic",
+      "startDateTime": "2026-09-09T09:00:00",
+      "endDateTime": "2026-09-09T17:00:00"
+    }
+  ],
+  "unavailabilities": [
+    {
+      "username": "bob_basic",
+      "startDateTime": "2026-09-07T12:00:00",
+      "endDateTime": "2026-09-07T13:00:00",
+      "reason": "Lunch-and-learn session"
+    },
+    {
+      "username": "charlie_basic",
+      "startDateTime": "2026-09-09T13:00:00",
+      "endDateTime": "2026-09-09T15:00:00",
+      "reason": "Dentist appointment"
+    }
+  ],
+  "schedules": [
+    {
+      "startDateTime": "2026-09-07T08:00:00",
+      "endDateTime": "2026-09-11T18:00:00"
+    }
+  ]
+}

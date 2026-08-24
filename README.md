@@ -46,8 +46,8 @@ backend startup.
 ### 3. Run the backend
 
 ```bash
+source ./env.sh
 cd backend
-source ../env.sh
 ./mvnw spring-boot:run
 ```
 
@@ -91,6 +91,45 @@ docker exec -it task-scheduler-postgres psql -U scheduler -d task_scheduler -c \
 
 All endpoints except `POST /api/auth/login` require a valid JWT
 (`Authorization: Bearer <token>`).
+
+## Demo credentials
+
+The demo datasets shipped in `data/scenarios/` create users that all share the
+password `admin` (e.g. `dana_basic`, `alice_basic`, `bob_basic` — see each JSON
+file for the exact list).
+
+```text
+Username: <any demo user>
+Password: admin
+```
+
+These credentials exist only so the imported scenarios are immediately usable.
+They are for local/demo purposes only — never reuse them anywhere real.
+
+## Importing demo scenarios
+
+Three reproducible demo scenarios live in `data/scenarios/`:
+
+| File | Purpose |
+| ---- | ------- |
+| `demo-basic.json` | Balanced workflow: 5 users, 8 realistic tasks, availabilities/unavailabilities, one schedule filled by the engine |
+| `demo-constrained.json` | Constraint handling: reduced capacity, unavailability windows, tight deadlines |
+| `demo-priority-deadlines.json` | Priority/deadline-driven allocation across 3 operators and 10 tasks |
+
+To import one:
+
+```text
+Admin → Data Import → Select JSON → Validate → Import
+```
+
+The same scenarios are also listed on the page as *built-in demo scenarios*
+and can be validated/imported with one click. The REST API equivalents are
+`POST /api/admin/import/validate`, `POST /api/admin/import` (multipart file
+upload) and `GET/POST /api/admin/import/scenarios…`; every endpoint requires
+the `ADMIN` role.
+
+> Imports are atomic. If validation or persistence fails, no partial data is
+> committed.
 
 ## Running the tests
 

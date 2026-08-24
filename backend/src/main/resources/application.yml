@@ -2,6 +2,11 @@ spring:
   application:
     name: task-scheduler
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     url: jdbc:postgresql://localhost:5432/task_scheduler
     username: scheduler
