@@ -46,8 +46,8 @@ backend startup.
 ### 3. Run the backend
 
 ```bash
+source ./env.sh
 cd backend
-source ../env.sh
 ./mvnw spring-boot:run
 ```
 
