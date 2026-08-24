@@ -339,6 +339,71 @@ a {
   border-color: #d5c8ec;
 }
 
+.badge-valid,
+.badge-imported {
+  background: #e5f2ea;
+  color: #1e7a46;
+  border-color: #bfe3cd;
+}
+
+.badge-invalid {
+  background: #fbe9e7;
+  color: var(--color-danger);
+  border-color: #f3c4bd;
+}
+
+.badge-conflict {
+  background: #fdf1df;
+  color: #a05e03;
+  border-color: #f3ddb5;
+}
+
+.import-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.import-file-label {
+  font-weight: 600;
+}
+
+.import-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.import-summary-item {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.import-summary-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  display: block;
+}
+
+.import-problems {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
 .badge-role-reviewer {
   background: #fdf1df;
   color: #a05e03;

@@ -32,12 +32,14 @@ export function clearStoredAuth(): void {
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly problems: string[];
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, problems: string[] = []) {
     super(message);
     this.name = 'ApiRequestError';
     this.status = status;
     this.code = code;
+    this.problems = problems;
   }
 }
 
@@ -54,7 +56,8 @@ export async function request<T>(
   const { method = 'GET', body, authenticated = true } = options;
 
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) {
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) {
     headers['Content-Type'] = 'application/json';
   }
   if (authenticated) {
@@ -69,7 +72,12 @@ export async function request<T>(
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined
+          ? undefined
+          : isForm
+            ? (body as FormData)
+            : JSON.stringify(body),
     });
   } catch {
     throw new ApiRequestError(
@@ -99,20 +107,31 @@ async function toApiError(response: Response): Promise<ApiRequestError> {
   const status = response.status;
   let code = fallbackCode(status);
   let message = fallbackMessage(status);
+  let problems: string[] = [];
 
   try {
-    const body = (await response.json()) as Partial<ApiErrorBody>;
+    const body = (await response.json()) as Partial<ApiErrorBody> & {
+      problems?: unknown;
+    };
     if (typeof body.message === 'string' && body.message.length > 0) {
       message = body.message;
     }
     if (typeof body.error === 'string' && body.error.length > 0) {
       code = body.error;
     }
+    if (Array.isArray(body.problems)) {
+      problems = body.problems.filter(
+        (problem): problem is string => typeof problem === 'string',
+      );
+      if (problems.length > 0 && message === fallbackMessage(status)) {
+        message = problems[0];
+      }
+    }
   } catch {
     // non-JSON error body: keep the fallback message
   }
 
-  return new ApiRequestError(status, code, message);
+  return new ApiRequestError(status, code, message, problems);
 }
 
 function fallbackCode(status: number): string {

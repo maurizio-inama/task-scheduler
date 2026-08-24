@@ -75,6 +75,22 @@ describe('App routing and authorization', () => {
     expect(screen.getByRole('link', { name: 'Tasks' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Availability' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Data Import' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides the Data Import navigation entry from reviewers', async () => {
+    seedAuth('REVIEWER');
+    meMock.mockResolvedValue({ id: 2, username: 'rev1', role: 'REVIEWER' });
+    renderApp();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Dashboard' }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('link', { name: 'Data Import' })).not.toBeInTheDocument();
   });
 
   it('exposes the Users navigation entry to admins only', async () => {
@@ -85,6 +101,19 @@ describe('App routing and authorization', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: 'Users' })).toBeInTheDocument();
+    });
+  });
+
+  it('exposes the Data Import navigation entry to admins only', async () => {
+    seedAuth('ADMIN');
+    meMock.mockResolvedValue({ id: 1, username: 'admin', role: 'ADMIN' });
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: 'Data Import' }),
+      ).toBeInTheDocument();
     });
   });
 });

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminImportPage } from './pages/AdminImportPage';
 import { AssignmentsPage } from './pages/AssignmentsPage';
 import { AvailabilityPage } from './pages/AvailabilityPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -32,6 +33,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={['ADMIN']}>
               <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="admin/import"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <AdminImportPage />
             </ProtectedRoute>
           }
         />

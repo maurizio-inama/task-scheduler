@@ -1,0 +1,203 @@
+{
+  "scenario": {
+    "id": "demo-constrained",
+    "name": "Constrained Capacity Demo",
+    "description": "Shows the scheduling engine respecting constraints: one operator with heavily reduced capacity, one operator away for part of the week, tight deadlines and a long incident task that only fits a few windows."
+  },
+  "users": [
+    {
+      "username": "marta_con",
+      "password": "admin",
+      "firstName": "Marta",
+      "lastName": "Kowalski",
+      "email": "marta.con@demodata.local",
+      "role": "ADMIN",
+      "enabled": true
+    },
+    {
+      "username": "felix_con",
+      "password": "admin",
+      "firstName": "Felix",
+      "lastName": "Adeyemi",
+      "email": "felix.con@demodata.local",
+      "role": "REVIEWER",
+      "enabled": true
+    },
+    {
+      "username": "alice_con",
+      "password": "admin",
+      "firstName": "Alice",
+      "lastName": "Fontana",
+      "email": "alice.con@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    },
+    {
+      "username": "bob_con",
+      "password": "admin",
+      "firstName": "Bob",
+      "lastName": "Marchetti",
+      "email": "bob.con@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    },
+    {
+      "username": "charlie_con",
+      "password": "admin",
+      "firstName": "Charlie",
+      "lastName": "Nguyen",
+      "email": "charlie.con@demodata.local",
+      "role": "OPERATOR",
+      "enabled": true
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Investigate payment gateway outage",
+      "description": "Post-incident analysis of the PSP outage; requires one uninterrupted working day to reconstruct the timeline.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 480,
+      "deadline": "2026-09-09T17:00:00"
+    },
+    {
+      "title": "Prepare security audit response",
+      "description": "Collect evidence and draft answers for the external security audit questionnaire.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 240,
+      "deadline": "2026-09-10T12:00:00"
+    },
+    {
+      "title": "Renew TLS certificates cluster A",
+      "description": "Rotate expiring certificates on cluster A and verify service restarts.",
+      "priority": "HIGH",
+      "estimatedDurationMinutes": 60,
+      "deadline": "2026-09-08T17:00:00"
+    },
+    {
+      "title": "Review vendor contract Globex",
+      "description": "Assess pricing changes and data-processing terms in the Globex renewal.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 120,
+      "deadline": "2026-09-11T17:00:00"
+    },
+    {
+      "title": "Update disaster recovery plan",
+      "description": "Incorporate lessons from the failover drill into DR runbook and RTO targets.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 300,
+      "deadline": "2026-09-11T17:00:00"
+    },
+    {
+      "title": "Triage backlog critical bugs",
+      "description": "Re-score the critical bug backlog and confirm still-reproducible items.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 180,
+      "deadline": "2026-09-10T17:00:00"
+    },
+    {
+      "title": "Onboard contractor account provisioning",
+      "description": "Provision accounts and access for two contractors starting Monday.",
+      "priority": "MEDIUM",
+      "estimatedDurationMinutes": 90,
+      "deadline": "2026-09-07T17:00:00"
+    },
+    {
+      "title": "Document API rate limiting changes",
+      "description": "Explain new rate-limit tiers for public API consumers in the developer portal.",
+      "priority": "LOW",
+      "estimatedDurationMinutes": 150,
+      "deadline": "2026-09-25T17:00:00"
+    },
+    {
+      "title": "Prepare quarterly compliance report",
+      "description": "Assemble control evidence for the Q3 compliance submission.",
+      "priority": "LOW",
+      "estimatedDurationMinutes": 240,
+      "deadline": "2026-09-30T17:00:00"
+    }
+  ],
+  "availabilities": [
+    {
+      "username": "alice_con",
+      "startDateTime": "2026-09-09T08:00:00",
+      "endDateTime": "2026-09-09T12:00:00"
+    },
+    {
+      "username": "alice_con",
+      "startDateTime": "2026-09-10T08:00:00",
+      "endDateTime": "2026-09-10T12:00:00"
+    },
+    {
+      "username": "bob_con",
+      "startDateTime": "2026-09-07T08:00:00",
+      "endDateTime": "2026-09-07T17:00:00"
+    },
+    {
+      "username": "bob_con",
+      "startDateTime": "2026-09-08T08:00:00",
+      "endDateTime": "2026-09-08T17:00:00"
+    },
+    {
+      "username": "bob_con",
+      "startDateTime": "2026-09-09T08:00:00",
+      "endDateTime": "2026-09-09T17:00:00"
+    },
+    {
+      "username": "bob_con",
+      "startDateTime": "2026-09-11T08:00:00",
+      "endDateTime": "2026-09-11T17:00:00"
+    },
+    {
+      "username": "charlie_con",
+      "startDateTime": "2026-09-07T08:00:00",
+      "endDateTime": "2026-09-07T13:00:00"
+    },
+    {
+      "username": "charlie_con",
+      "startDateTime": "2026-09-08T08:00:00",
+      "endDateTime": "2026-09-08T13:00:00"
+    },
+    {
+      "username": "charlie_con",
+      "startDateTime": "2026-09-09T08:00:00",
+      "endDateTime": "2026-09-09T13:00:00"
+    },
+    {
+      "username": "charlie_con",
+      "startDateTime": "2026-09-11T08:00:00",
+      "endDateTime": "2026-09-11T13:00:00"
+    }
+  ],
+  "unavailabilities": [
+    {
+      "username": "bob_con",
+      "startDateTime": "2026-09-08T08:00:00",
+      "endDateTime": "2026-09-08T17:00:00",
+      "reason": "Team offsite (day one)"
+    },
+    {
+      "username": "bob_con",
+      "startDateTime": "2026-09-09T08:00:00",
+      "endDateTime": "2026-09-09T17:00:00",
+      "reason": "Team offsite (day two)"
+    },
+    {
+      "username": "bob_con",
+      "startDateTime": "2026-09-11T13:00:00",
+      "endDateTime": "2026-09-11T17:00:00",
+      "reason": "Half-day leave"
+    },
+    {
+      "username": "charlie_con",
+      "startDateTime": "2026-09-09T09:30:00",
+      "endDateTime": "2026-09-09T11:00:00",
+      "reason": "Medical appointment"
+    }
+  ],
+  "schedules": [
+    {
+      "startDateTime": "2026-09-07T08:00:00",
+      "endDateTime": "2026-09-11T18:00:00"
+    }
+  ]
+}
