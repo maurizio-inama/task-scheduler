@@ -3,6 +3,7 @@ import { schedulesApi } from '../api/schedulesApi';
 import { tasksApi } from '../api/tasksApi';
 import { EmptyState } from '../components/EmptyState';
 import { Loading } from '../components/Loading';
+import TaskTimeline from '../components/TaskTimeline';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
 import { formatDateTime, formatDuration } from '../utils/format';
@@ -70,6 +71,11 @@ export function DashboardPage() {
       <p className="page-description">
         Welcome back, {user?.username}. Here is the current planning overview.
       </p>
+
+      <section className="dashboard-section">
+        <h2>Task Timeline</h2>
+        <TaskTimeline />
+      </section>
 
       <div className="stat-grid">
         <div className="stat-card">
